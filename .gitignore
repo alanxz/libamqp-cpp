@@ -1,3 +1,5 @@
 # Ignore vim junk
 *~
 .*.sw?
+
+.clang_complete

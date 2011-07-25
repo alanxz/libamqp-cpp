@@ -1,0 +1,6 @@
+#ifndef _AMQPP_EXCEPTION_H_INCLUDED_
+#define _AMQPP_EXCEPTION_H_INCLUDED_
+
+#include <stdexcept>
+
+#endif // _AMQPP_EXCEPTION_H_INCLUDED_
