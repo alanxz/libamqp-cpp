@@ -3,6 +3,9 @@ set(LIBAMQP_CPP_SRCS
 
 	wireformat.h
 	wireformat.cpp
+
+    connection.h
+    connection.cpp
 	)
 
 add_library(amqp-cpp SHARED
