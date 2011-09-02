@@ -2,7 +2,7 @@ cmake_minimum_required(VERSION 2.8)
 
 project(libamqp-cpp)
 
-find_package(Boost 1.46.1 REQUIRED)
+find_package(Boost 1.46.1 COMPONENTS system thread REQUIRED)
 include_directories(${Boost_INCLUDE_DIR})
 
 include(ExternalProject)
