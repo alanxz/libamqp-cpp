@@ -3,3 +3,19 @@
 .*.sw?
 
 .clang_complete
+
+# Ignore cmake stuff
+CMakeCache.txt
+CMakeFiles/
+cmake_install.cmake
+CTestTestfile.cmake
+
+# Ignore VS.NET stuff
+*.vc?proj*
+*sdf
+*.sln
+*.suo
+x64/
+ipch/
+Debug/
+Release/
