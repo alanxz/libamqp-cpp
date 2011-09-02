@@ -1,6 +1,9 @@
 #ifndef _LIBAMQPCPP_CONNECTION_H_INCLUDED_
 #define _LIBAMQPCPP_CONNECTION_H_INCLUDED_
 
+#include "export.h"
+
+#include <boost/asio/io_service.hpp>
 #include <boost/noncopyable.hpp>
 
 #include <string>
@@ -8,7 +11,7 @@
 namespace amqpp 
 {
 
-class connection : boost::noncopyable
+class AMQPP_EXPORT connection : boost::noncopyable
 {
 	public:
 		explicit connection(const std::string& host = "localhost",
@@ -26,6 +29,8 @@ class connection : boost::noncopyable
 		const std::string m_vhost;
 		const std::string m_username;
 		const std::string m_password;
+
+    boost::asio::io_service m_io_service;
 };
 } // namespace amqpp
 

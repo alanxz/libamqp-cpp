@@ -2,6 +2,9 @@
 
 #include <boost/array.hpp>
 #include <boost/asio.hpp>
+#include <boost/lexical_cast.hpp>
+
+using boost::asio::ip::tcp;
 
 namespace amqpp
 {
@@ -18,30 +21,20 @@ connection::~connection()
 
 void connection::connect()
 {
-    boost::asio::io_service io_service;
+  tcp::resolver resolver(m_io_service);
+  tcp::resolver::query query("localhost", boost::lexical_cast<std::string>(5672));
+  tcp::resolver::iterator endpoint_iterator = resolver.resolve(query);
 
-    boost::asio::ip::tcp::resolver resolver(io_stream);
-    boost::asio::ip::tcp::resolver::query query("localhost", "amqp");
-    boost::asio::ip::tcp::resolver::iterator endpoint_it = resolver.resolve(query);
+  tcp::socket socket(m_io_service);
+  socket.connect(*endpoint_iterator);
 
-    boost::asio::ip::tcp::socket socket(io_service);
-    boost::asio::connect(socket, endpoint_iterator);
-    boost::noncopyable;
-    boost::asio::ip::tcp::socket sock(io_service);
-    sock.get_io_service();
+  static const boost::array<char, 8> handshake = { { 'A', 'M', 'Q', 'P', 0, 0, 9, 1 } };
+  boost::asio::write(socket, boost::asio::buffer(handshake));
 
-    boost::array<char, 8> hand_shake = {{ 'A', 'M', 'Q', 'P', 0, 0, 9, 1 }};
+  boost::array<char, 8> response;
+  boost::asio::read(socket, boost::asio::buffer(response, 7));
+  
 
-    socket.write_some(boost::asio::buffer(hand_shake));
-
-    boost::array<char, 8> reply;
-    socket.read_some(boost::asio::buffer(reply));
-
-    if (reply[0] == 'A') 
-    {
-        // Error
-        socket.close();
-    }
 }
 
 } // namespace amqpp
