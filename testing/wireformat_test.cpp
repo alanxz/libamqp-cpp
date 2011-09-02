@@ -118,8 +118,7 @@ TEST(wireformat, write_longstring)
 TEST(wireformat, read_uint8)
 {
 	std::istringstream is("\x30");
-	uint8_t value = 0;
-	amqpp::detail::wireformat::read_uint8(is, value);
+	uint8_t value = amqpp::detail::wireformat::read_uint8(is);
 
 	EXPECT_EQ(0x30, value);
 }
@@ -127,8 +126,7 @@ TEST(wireformat, read_uint8)
 TEST(wireformat, read_uint16)
 {
 	std::istringstream is("\x30\x31");
-	uint16_t value = 0;
-	amqpp::detail::wireformat::read_uint16(is, value);
+	uint16_t value = amqpp::detail::wireformat::read_uint16(is);
 
 	EXPECT_EQ(0x3031, value);
 }
@@ -136,8 +134,7 @@ TEST(wireformat, read_uint16)
 TEST(wireformat, read_uint32)
 {
 	std::istringstream is("\x30\x31\x32\x33");
-	uint32_t value = 0;
-	amqpp::detail::wireformat::read_uint32(is, value);
+	uint32_t value = amqpp::detail::wireformat::read_uint32(is);
 
 	EXPECT_EQ(0x30313233, value);
 }
@@ -145,8 +142,7 @@ TEST(wireformat, read_uint32)
 TEST(wireformat, read_uint64)
 {
 	std::istringstream is("\x30\x31\x32\x33\x34\x35\x36\x37");
-	uint64_t value = 0;
-	amqpp::detail::wireformat::read_uint64(is, value);
+	uint64_t value = amqpp::detail::wireformat::read_uint64(is);
 
 	EXPECT_EQ(0x3031323334353637, value);
 }
@@ -154,8 +150,7 @@ TEST(wireformat, read_uint64)
 TEST(wireformat, read_shortstring)
 {
 	std::istringstream is("\x0A 123456789");
-	std::string value;
-	amqpp::detail::wireformat::read_shortstring(is, value);
+	std::string value = amqpp::detail::wireformat::read_shortstring(is);
 
 	EXPECT_EQ(std::string(" 123456789"), value);
 }
@@ -163,16 +158,14 @@ TEST(wireformat, read_shortstring)
 TEST(wireformat, read_shortstringfail)
 {
 	std::istringstream is("\x0A 12345678");
-	std::string value;
-	EXPECT_THROW(amqpp::detail::wireformat::read_shortstring(is, value), std::runtime_error);
+	EXPECT_THROW(std::string value = amqpp::detail::wireformat::read_shortstring(is), std::runtime_error);
 }
 
 TEST(wireformat, read_longstring)
 {
 	std::string input("\x00\x00\x00\x0a 123456789", 14);
 	std::istringstream is(input);
-	std::string value;
-	amqpp::detail::wireformat::read_longstring(is, value);
+	std::string value = amqpp::detail::wireformat::read_longstring(is);
 
 	EXPECT_EQ(std::string(" 123456789"), value);
 }
@@ -181,6 +174,5 @@ TEST(wireformat, read_longstringfail)
 {
 	std::string input("\x00\x00\x00\x0b 123456789", 14);
 	std::istringstream is(input);
-	std::string value;
-	EXPECT_THROW(amqpp::detail::wireformat::read_longstring(is, value), std::runtime_error);
+	EXPECT_THROW(std::string value = amqpp::detail::wireformat::read_longstring(is), std::runtime_error);
 }

@@ -17,7 +17,7 @@ void wireformat::write_shortstring(std::ostream& o, const std::string& s)
 {
 	if (s.length() > 255)
 	{
-		throw std::logic_error("AMQPP: short strings can only be 255 characters long");
+		throw std::logic_error("AMQPP: short strings can only be 255 bytes long");
 	}
 
 	uint8_t len = static_cast<uint8_t>(s.length());
@@ -25,10 +25,9 @@ void wireformat::write_shortstring(std::ostream& o, const std::string& s)
 	o.write(s.data(), s.length());
 }
 
-void wireformat::read_shortstring(std::istream& i, std::string& s)
+std::string wireformat::read_shortstring(std::istream& i)
 {
-	uint8_t len = 0;
-	read_uint8(i, len);
+	uint8_t len = read_uint8(i);
 	if (!i.good())
 	{
 		// TODO: Throw a proper error
@@ -40,25 +39,29 @@ void wireformat::read_shortstring(std::istream& i, std::string& s)
 		// TODO: Throw a proper error
 		throw std::runtime_error("Failure to read short string data");
 	}
-	s.assign(short_str, len);
+	return std::string(short_str, len);
 }
 
 void wireformat::write_longstring(std::ostream& o, const std::string& s)
 {
-	uint32_t len = s.length();
+  if (s.length() > std::numeric_limits<uint32_t>::max())
+  {
+    throw std::logic_error("AMQPP: long strings can only be UINT32_MAX bytes long");
+  }
+	uint32_t len = static_cast<uint32_t>(s.length());
 	write_uint32(o, len);
 	o.write(s.data(), len);
 }
 
-void wireformat::read_longstring(std::istream& i, std::string& s)
+std::string wireformat::read_longstring(std::istream& i)
 {
-	uint32_t len = 0;
-	read_uint32(i, len);
+	uint32_t len = read_uint32(i);
 	if (!i.good())
 	{
 		// TODO: Throw a proper error
 		throw std::runtime_error("Failure to read longstring length");
 	}
+  std::string s;
 	s.reserve(len);
 	s.clear();
 
@@ -77,6 +80,7 @@ void wireformat::read_longstring(std::istream& i, std::string& s)
 		}
 		s.append(buffer, to_read);
 	}
+  return s;
 }
 
 } // namespace detail
