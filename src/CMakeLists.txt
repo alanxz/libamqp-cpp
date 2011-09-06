@@ -5,10 +5,13 @@ set(LIBAMQP_CPP_SRCS
     connection.h
     connection.cpp
 
-	frame.h
-	frame.cpp
+        export.h
 
-	export.h
+        frame.h
+        frame.cpp
+
+    methods.h
+    methods.cpp
 
 	protocol_v091.h
 	protocol_v091.cpp

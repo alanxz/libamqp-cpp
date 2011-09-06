@@ -1,8 +1,10 @@
 #include "connection.h"
+#include "frame.h"
 
 #include <boost/array.hpp>
-#include <boost/asio.hpp>
+#include <boost/asio/ip/tcp.hpp>
 #include <boost/lexical_cast.hpp>
+#include <boost/shared_ptr.hpp>
 
 using boost::asio::ip::tcp;
 
@@ -23,17 +25,22 @@ void connection::connect()
 {
   tcp::resolver resolver(m_io_service);
   tcp::resolver::query query("localhost", boost::lexical_cast<std::string>(5672));
-  tcp::resolver::iterator endpoint_iterator = resolver.resolve(query);
 
-  tcp::socket socket(m_io_service);
-  socket.connect(*endpoint_iterator);
+  tcp::iostream io(query);
 
   static const boost::array<char, 8> handshake = { { 'A', 'M', 'Q', 'P', 0, 0, 9, 1 } };
-  boost::asio::write(socket, boost::asio::buffer(handshake));
+  io.write(handshake.data(), handshake.size());
 
-  boost::array<char, 8> response;
-  boost::asio::read(socket, boost::asio::buffer(response, 7));
-  
+  char resp = io.peek();
+
+  if (resp != detail::frame::METHOD_TYPE)
+  {
+      // connection failure
+  }
+
+  boost::shared_ptr<detail::frame> fr = detail::frame::read_frame(io);
+
+
 
 }
 

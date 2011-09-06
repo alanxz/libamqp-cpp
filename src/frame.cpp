@@ -5,6 +5,7 @@
 #include <boost/make_shared.hpp>
 #include <istream>
 #include <ostream>
+#include <stdexcept>
 
 namespace amqpp
 {
@@ -54,6 +55,7 @@ void frame::write_frame(const frame& f, std::ostream& o)
   o.write(boost::asio::buffer_cast<char*>(f.get_payload_data()), boost::asio::buffer_size(f.get_payload_data()));
 
   wireformat::write_uint8(o, FRAME_END);
+  o.flush();
 }
 
 frame::frame(frame_type type, uint16_t channel, const boost::asio::mutable_buffer& payload) :

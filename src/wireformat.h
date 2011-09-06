@@ -74,6 +74,9 @@ class AMQPP_EXPORT wireformat
 
 		static void write_longstring(std::ostream& o, const std::string& s);
 		static std::string read_longstring(std::istream& o);
+
+    static void write_table(std::ostream& o, const std::string& s);
+    static std::string read_table(std::istream& i);
 };
 } // namespace detail
 } // namespace amqppp

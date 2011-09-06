@@ -83,5 +83,15 @@ std::string wireformat::read_longstring(std::istream& i)
   return s;
 }
 
+void wireformat::write_table(std::ostream& o, const std::string& s)
+{
+    write_longstring(o, s);
+}
+
+std::string wireformat::read_table(std::istream& i)
+{
+    return read_longstring(i);
+}
+
 } // namespace detail
 } // namespace amqpp
