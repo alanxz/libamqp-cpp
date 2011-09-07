@@ -77,6 +77,31 @@ class AMQPP_EXPORT wireformat
 
     static void write_table(std::ostream& o, const std::string& s);
     static std::string read_table(std::istream& i);
+
+private:
+  enum table_entry_type
+  {
+    boolean_type = 't',
+    int8_type = 'b',
+    uint8_type = 'B',
+    int16_type = 'U',
+    uint16_type = 'u',
+    int32_type = 'I',
+    uint32_type = 'i',
+    int64_type = 'L',
+    uint64_type = 'l',
+    float_type = 'f',
+    double_type = 'd',
+    decimal_type = 'D',
+    shortstring_type = 's',
+    longstring_type = 'S',
+    fieldarray_type = 'A',
+    timestamp_type = 'T',
+    fieldtable_type = 'F',
+    void_type = 'V'
+  };
+  static void read_table_entry(std::istream& i);
+
 };
 } // namespace detail
 } // namespace amqppp

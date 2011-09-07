@@ -5,7 +5,10 @@
 #include <boost/cstdint.hpp>
 
 #include <cassert>
-#include <iostream>
+#include <istream>
+#include <ostream>
+#include <sstream>
+#include <boost/variant.hpp>
 
 
 namespace amqpp
@@ -90,7 +93,68 @@ void wireformat::write_table(std::ostream& o, const std::string& s)
 
 std::string wireformat::read_table(std::istream& i)
 {
-    return read_longstring(i);
+    std::istringstream is(read_longstring(i));
+}
+
+void wireformat::read_table_entry(std::istream& i)
+{
+  std::string field_name = read_shortstring(i);
+  uint8_t field_type = read_uint8(i);
+  switch (field_type)
+  {
+  case boolean_type:
+    read_uint8(i);
+    break;
+  case int8_type:
+    read_uint8(i);
+    break;
+  case uint8_type:
+    read_uint8(i);
+    break;
+  case int16_type:
+    read_uint16(i);
+    break;
+  case uint16_type:
+    read_uint16(i);
+    break;
+  case int32_type:
+    read_uint32(i);
+    break;
+  case uint32_type:
+    read_uint32(i);
+    break;
+  case int64_type:
+    read_uint64(i);
+    break;
+  case uint64_type:
+    read_uint64(i);
+    break;
+  case float_type:
+    float fval;
+    i.read(reinterpret_cast<char*>(&fval), sizeof(fval));
+    break;
+  case double_type:
+    double dval;
+    i.read(reinterpret_cast<char*>(&dval), sizeof(dval));
+    break;
+  case decimal_type:
+    read_uint8(i);
+    read_uint32(i);
+    break;
+  case shortstring_type:
+    read_shortstring(i);
+    break;
+  case longstring_type:
+    read_longstring(i);
+    break;
+  case fieldarray_type:
+  case timestamp_type:
+  case fieldtable_type:
+  case void_type:
+    break;
+  default:
+    throw std::runtime_error("Invalid field table type");
+  }
 }
 
 } // namespace detail

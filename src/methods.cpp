@@ -9,6 +9,13 @@
 namespace amqpp {
 namespace detail {
 
+boost::shared_ptr<method> method::read(std::istream& i)
+{
+}
+
+const uint16_t connection_start::CLASS_ID = 10;
+const uint16_t connection_start::METHOD_ID = 10;
+
 boost::shared_ptr<connection_start> connection_start::read(std::istream& i)
 {
     boost::shared_ptr<connection_start> resp = boost::make_shared<connection_start>();
