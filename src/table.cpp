@@ -1,6 +1,8 @@
 #include "table.h"
 
 #include <boost/mpl/at.hpp>
+#include <boost/mpl/map.hpp>
+#include <boost/mpl/pair.hpp>
 #include <boost/variant/apply_visitor.hpp>
 #include <boost/variant/static_visitor.hpp>
 
@@ -70,7 +72,6 @@ namespace detail
         return false;
     }
 
-    template <>
     bool operator()(const std::string&) const
     {
       if (table_entry::shortstring_type == m_type ||
@@ -80,8 +81,7 @@ namespace detail
         return false;
     }
 
-    template <>
-    bool operator()(const int64_t&) const
+    bool operator()(const int64_t) const
     {
       if (table_entry::int64_type == m_type ||
           table_entry::timestamp_type == m_type)

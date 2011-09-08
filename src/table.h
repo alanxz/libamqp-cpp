@@ -1,10 +1,7 @@
 #ifndef _AMQPP_TABLE_H_INCLUDED_
 #define _AMQPP_TABLE_H_INCLUDED_
 
-#include <boost/array.hpp>
 #include <boost/cstdint.hpp>
-#include <boost/mpl/map.hpp>
-#include <boost/mpl/pair.hpp>
 #include <boost/variant/variant.hpp>
 #include <boost/variant/recursive_variant.hpp>
 
@@ -13,11 +10,6 @@
 #include <utility>
 #include <vector>
 
-using namespace boost::mpl;
-
-#ifdef BOOST_VARIANT_NO_FULL_RECURSIVE_VARIANT_SUPPORT
-# err nooo
-#endif
 namespace amqpp
 {
 
@@ -62,9 +54,36 @@ public:
     void_type = 'V'
   };
 
-  typedef std::pair<uint8_t, uint32_t> decimal_t;
+  // Hacks:
+
+  /*
+   * Decimal type, first is the magnitude, second is the value.
+   * How you deal with this is up to you
+   */
+  typedef std::pair<uint8_t, int32_t> decimal_t;
+
+  /*
+   * Void type
+   * Doesn't contain any value - for a void element in a table
+   */
   typedef struct { } void_t;
 
+  /*
+   * Array object
+   * Use the field_array_t typedef for an array object
+   *
+   * This is here because the boost::recursive_variant_ doesn't work
+   * if you nest it in a template
+   */
+  template <class FirstT, class SecondT>
+  struct vector_of_pairs
+  {
+    typedef std::vector<std::pair<FirstT, SecondT> > type;
+  };
+
+  /*
+   * Defines a field value which can be one of a number of types
+   */
   typedef boost::make_recursive_variant<
     bool,
     int8_t,
@@ -79,32 +98,12 @@ public:
     double,
     decimal_t,
     std::string,
-    std::vector<boost::recursive_variant_>,
+    vector_of_pairs<field_type, boost::recursive_variant_>::type,
     table,
     void_t
   >::type field_value_t;
 
-  typedef std::vector<std::pair<field_type, field_value_t> > field_array_t;
-
-  //typedef boost::mpl::map<
-  //  boost::mpl::pair<boost::mpl::int_<boolean_type>,    bool>,
-  //  boost::mpl::pair<boost::mpl::int_<int8_type>,       int8_t>,
-  //  boost::mpl::pair<boost::mpl::int_<uint8_type>,      uint8_t>,
-  //  boost::mpl::pair<boost::mpl::int_<int16_type>,      int16_t>,
-  //  boost::mpl::pair<boost::mpl::int_<uint16_type>,     uint16_t>,
-  //  boost::mpl::pair<boost::mpl::int_<int32_type>,      int32_t>,
-  //  boost::mpl::pair<boost::mpl::int_<uint32_type>,     uint32_t>,
-  //  boost::mpl::pair<boost::mpl::int_<int64_type>,      int64_t>,
-  //  boost::mpl::pair<boost::mpl::int_<float_type>,      float>,
-  //  boost::mpl::pair<boost::mpl::int_<double_type>,     double>,
-  //  boost::mpl::pair<boost::mpl::int_<decimal_type>,    decimal_t>,
-  //  boost::mpl::pair<boost::mpl::int_<shortstring_type>,std::string>,
-  //  boost::mpl::pair<boost::mpl::int_<longstring_type>, std::string>,
-  //  boost::mpl::pair<boost::mpl::int_<fieldarray_type>, field_array_t>,
-  //  boost::mpl::pair<boost::mpl::int_<timestamp_type>,  int64_t>,
-  //  boost::mpl::pair<boost::mpl::int_<fieldtable_type>, table>,
-  //  boost::mpl::pair<boost::mpl::int_<void_type>,       int8_t>
-  //> field_type_to_field_value_t_map;
+  typedef vector_of_pairs<field_type, field_value_t>::type field_array_t;
 
 
   explicit table_entry(const std::string& key, const field_value_t& data, field_type data_type);
