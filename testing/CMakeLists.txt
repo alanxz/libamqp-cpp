@@ -9,3 +9,7 @@ add_test(test_byteswap test_byteswap)
 add_executable(test_wireformat wireformat_test.cpp)
 target_link_libraries(test_wireformat amqp-cpp ${GTEST_BOTH_LIBRARIES})
 add_test(test_wireformat test_wireformat)
+
+add_executable(test_table table_test.cpp)
+target_link_libraries(test_table amqp-cpp ${GTEST_BOTH_LIBRARIES})
+add_test(test_table test_table)
