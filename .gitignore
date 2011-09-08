@@ -9,6 +9,8 @@ CMakeCache.txt
 CMakeFiles/
 cmake_install.cmake
 CTestTestfile.cmake
+Makefile
+rabbitmq-codegen/
 
 # Ignore VS.NET stuff
 *.vc?proj*
@@ -19,3 +21,6 @@ x64/
 ipch/
 Debug/
 Release/
+
+# Ignore QTCreator junk
+*.*.user
