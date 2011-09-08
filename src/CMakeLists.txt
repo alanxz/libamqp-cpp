@@ -13,16 +13,16 @@ set(LIBAMQP_CPP_SRCS
     methods.h
     methods.cpp
 
-	protocol_v091.h
-	protocol_v091.cpp
+    protocol_v091.h
+    protocol_v091.cpp
 
-	scoped_buffer.h
+    scoped_buffer.h
 
-	table.h
-	table.cpp
+    table.h
+    table.cpp
 
-	wireformat.h
-	wireformat.cpp
+    wireformat.h
+    wireformat.cpp
 	)
 
 add_library(amqp-cpp SHARED
