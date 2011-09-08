@@ -6,15 +6,26 @@
 #include <boost/variant/apply_visitor.hpp>
 #include <boost/variant/static_visitor.hpp>
 
+#include <stdexcept>
+
 namespace amqpp
 {
+void table::insert(const table_entry& data)
+{
+  m_table.insert(std::make_pair(data.get_key(), data));
+}
 
 table_entry::table_entry(const std::string& key, const field_value_t& data, field_type data_type) :
   m_key(key), m_data(data), m_type(data_type)
 {
-  validate_key_name(m_key);
-  validate_data_type(m_data, m_type);
-  
+  if (!validate_key_name(m_key))
+  {
+    throw std::runtime_error("Key name is invalid");
+  }
+  if (!validate_data_type(m_data, m_type))
+  {
+    throw std::runtime_error("Invalid field type");
+  }
 }
 
 table_entry::~table_entry()

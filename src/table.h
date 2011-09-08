@@ -1,6 +1,8 @@
 #ifndef _AMQPP_TABLE_H_INCLUDED_
 #define _AMQPP_TABLE_H_INCLUDED_
 
+#include "export.h"
+
 #include <boost/cstdint.hpp>
 #include <boost/variant/variant.hpp>
 #include <boost/variant/recursive_variant.hpp>
@@ -15,21 +17,21 @@ namespace amqpp
 
 class table_entry;
 
-class table
+class AMQPP_EXPORT table
 {
 public:
   typedef std::map<const std::string, table_entry> table_impl_t;
 
   void insert(const table_entry& e);
 
-  table_impl_t& get_map();
-  const table_impl_t& get_map() const;
+  table_impl_t& get_map() { return m_table; }
+  const table_impl_t& get_map() const { return m_table; }
 
 private:
   table_impl_t m_table;
 };
 
-class table_entry
+class AMQPP_EXPORT table_entry
 {
 public:
   enum field_type
@@ -98,12 +100,12 @@ public:
     double,
     decimal_t,
     std::string,
-    vector_of_pairs<field_type, boost::recursive_variant_>::type,
+    vector_of_pairs<boost::recursive_variant_, field_type>::type,
     table,
     void_t
   >::type field_value_t;
 
-  typedef vector_of_pairs<field_type, field_value_t>::type field_array_t;
+  typedef vector_of_pairs<field_value_t, field_type>::type field_array_t;
 
 
   explicit table_entry(const std::string& key, const field_value_t& data, field_type data_type);
