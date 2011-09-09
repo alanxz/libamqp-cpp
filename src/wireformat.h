@@ -81,6 +81,9 @@ class AMQPP_EXPORT wireformat
     static amqpp::table read_table(std::istream& i);
 
 private:
+  static void write_table_entry(std::ostream& o, const table_entry& e);
+  static void write_table_value(std::ostream& o, table_entry::field_type t, const table_entry::field_value_t& d);
+
   static table_entry read_table_entry(std::istream& i);
   static std::pair<table_entry::field_value_t, table_entry::field_type> read_field_value(std::istream& i);
 

@@ -3,6 +3,7 @@
 #include "byteswap.h"
 
 #include <boost/cstdint.hpp>
+#include <boost/variant/get.hpp>
 
 #include <cassert>
 #include <sstream>
@@ -83,9 +84,97 @@ std::string wireformat::read_longstring(std::istream& i)
   return s;
 }
 
-void wireformat::write_table(std::ostream& o, const amqpp::table& t)
+void wireformat::write_table(std::ostream& o, const table& t)
 {
-    //write_longstring(o, s);
+  std::ostringstream os;
+  const amqpp::table::table_impl_t map = t.get_map();
+  for (amqpp::table::table_impl_t::const_iterator it = map.begin();
+       it != map.end(); ++it)
+  {
+    write_table_entry(os, it->second);
+  }
+  write_longstring(o, os.str());
+}
+
+void wireformat::write_table_entry(std::ostream& o, const table_entry& e)
+{
+  write_shortstring(o, e.get_key());
+  write_table_value(o, e.get_type(), e.get_data());
+}
+
+void wireformat::write_table_value(std::ostream& o, table_entry::field_type t,
+                                   const table_entry::field_value_t& d)
+{
+  write_uint8(o, static_cast<uint8_t>(t));
+  switch (t)
+  {
+  case table_entry::int8_type:
+    write_uint8(o, static_cast<uint8_t>(boost::get<int8_t>(d)));
+    break;
+  case table_entry::uint8_type:
+    write_uint8(o, boost::get<uint8_t>(d));
+    break;
+  case table_entry::int16_type:
+    write_uint16(o, static_cast<uint16_t>(boost::get<int16_t>(d)));
+    break;
+  case table_entry::uint16_type:
+    write_uint16(o, boost::get<uint16_t>(d));
+    break;
+  case table_entry::int32_type:
+    write_uint32(o, static_cast<uint32_t>(boost::get<int32_t>(d)));
+    break;
+  case table_entry::uint32_type:
+    write_uint32(o, boost::get<uint32_t>(d));
+    break;
+  case table_entry::int64_type:
+    write_uint64(o, static_cast<uint64_t>(boost::get<int64_t>(d)));
+    break;
+  case table_entry::uint64_type:
+  case table_entry::timestamp_type:
+    write_uint64(o, boost::get<uint64_t>(d));
+    break;
+  case table_entry::float_type:
+    o.write(reinterpret_cast<const char*>(&boost::get<float>(d)), sizeof(float));
+    break;
+  case table_entry::double_type:
+    o.write(reinterpret_cast<const char*>(&boost::get<double>(d)), sizeof(double));
+    break;
+  case table_entry::decimal_type:
+  {
+    table_entry::decimal_t val = boost::get<table_entry::decimal_t>(d);
+    write_uint8(o, val.first);
+    write_uint32(o, static_cast<uint32_t>(val.second));
+  }
+  case table_entry::shortstring_type:
+    write_shortstring(o, boost::get<std::string>(d));
+    break;
+  case table_entry::longstring_type:
+    write_longstring(o, boost::get<std::string>(d));
+    break;
+  case table_entry::fieldarray_type:
+  {
+    table_entry::field_array_t val = boost::get<table_entry::field_array_t>(d);
+    std::ostringstream os;
+    for (table_entry::field_array_t::const_iterator it = val.begin();
+         it != val.end(); ++it)
+    {
+      write_table_value(os, it->second, it->first);
+    }
+    write_longstring(o, os.str());
+    break;
+  }
+  case table_entry::fieldtable_type:
+  {
+    std::ostringstream os;
+    write_table(os, boost::get<table>(d));
+    write_longstring(o, os.str());
+    break;
+  }
+  case table_entry::void_type:
+    break;
+  default:
+    throw std::runtime_error("Invalid table entry type");
+  }
 }
 
 amqpp::table wireformat::read_table(std::istream& i)
