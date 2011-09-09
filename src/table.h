@@ -12,10 +12,17 @@
 #include <utility>
 #include <vector>
 
+// This is here to stop errors from cropping up in MSVC 10
+namespace boost
+{
+  struct recursive_variant_ {};
+}
+
 namespace amqpp
 {
 
 class table_entry;
+
 
 class AMQPP_EXPORT table
 {

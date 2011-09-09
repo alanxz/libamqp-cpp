@@ -4,8 +4,8 @@
 #include <boost/cstdint.hpp>
 #include <boost/shared_ptr.hpp>
 
-#include <iosfwd>
 #include <string>
+#include <limits>
 
 namespace amqpp {
 namespace detail {
@@ -19,29 +19,27 @@ public:
     virtual uint16_t get_method_id() const = 0;
 
     virtual void write(std::ostream& o) const = 0;
-    
+    virtual std::string to_string() const = 0;
 };
 
-class connection_start : public method
+/**
+  * Validate short strings
+  * short strings must be 255 characters or less in length
+  * short strings must not contain any embedded nulls
+  */
+inline void validate_shortstring(const std::string& s)
 {
-public:
-  static const uint16_t CLASS_ID;
-  static const uint16_t METHOD_ID;
+  if (s.length() > std::numeric_limits<uint8_t>::max())
+    throw std::runtime_error("Short string is longer than 255 bytes in length");
+  if (s.find('\0') != std::string::npos)
+    throw std::runtime_error("Short string may not contain any embedded '\\0' characters");
+}
 
-  virtual uint16_t get_class_id() const { return CLASS_ID; }
-  virtual uint16_t get_method_id() const { return METHOD_ID; }
-
-    virtual void write(std::ostream& o) const;
-
-    uint8_t version_major;
-    uint8_t version_minor;
-    std::string server_properties;
-    std::string mechanisms;
-    std::string locales;
-
-protected:
-    static boost::shared_ptr<connection_start> read(std::istream& i);
-};
+inline void validate_longstring(const std::string& s)
+{
+  if (s.length() > std::numeric_limits<uint32_t>::max())
+    throw std::runtime_error("Long string cannot be longer than UINT_MAX bytes in length");
+}
 
 } // namespace detail
 } // namespace amqpp
