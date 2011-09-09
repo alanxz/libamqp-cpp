@@ -11,6 +11,10 @@ cmake_install.cmake
 CTestTestfile.cmake
 Makefile
 rabbitmq-codegen/
+*.gen.*
+*.pyc
+amqp_codegen.py
+amqp-rabbitmq-0.9.1.json
 
 # Ignore VS.NET stuff
 *.vc?proj*
