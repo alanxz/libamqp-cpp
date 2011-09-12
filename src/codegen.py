@@ -144,7 +144,12 @@ def genBody(spec):
         method_name = sanitizeName(method.name)
         print "std::string %s::to_string() const" % (method_name)
         print "{"
-        print "  return std::string();"
+        print "  std::ostringstream o;"
+        print '  o << "class: %s<%d> method: %s<%d> {";' % (method.klass.name, method.klass.index, method.name, method.index)
+        for field in method.arguments:
+            print '  o << "%s<%s>: " << get_%s() << " ";' % (field.name, spec.resolveDomain(field.domain), sanitizeName(field.name))
+        print '  o << "}";'
+        print "  return o.str();"
         print "}"
 
     def genReadBits(index, field, arguments):
@@ -213,6 +218,7 @@ def genBody(spec):
 
 #include <istream>
 #include <ostream>
+#include <sstream>
 
 namespace amqpp
 {
