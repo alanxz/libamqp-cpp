@@ -29,6 +29,10 @@ class AMQPP_EXPORT wireformat
 		{
       uint8_t i = 0;
 			o.read(reinterpret_cast<char*>(&i), sizeof(i));
+      if (!o.good())
+      {
+        throw std::runtime_error("Unable to read uint64");
+      }
       return i;
 		}
 
@@ -42,6 +46,10 @@ class AMQPP_EXPORT wireformat
 		{
       uint16_t i = 0;
 			o.read(reinterpret_cast<char*>(&i), sizeof(i));
+      if (!o.good())
+      {
+        throw std::runtime_error("Unable to read uint16");
+      }
 			return byteswap(i);
 		}
 
@@ -55,6 +63,10 @@ class AMQPP_EXPORT wireformat
 		{
       uint32_t i = 0;
 			o.read(reinterpret_cast<char*>(&i), sizeof(i));
+      if (!o.good())
+      {
+        throw std::runtime_error("Unable to read uint32");
+      }
 			return byteswap(i);
 		}
 
@@ -68,6 +80,10 @@ class AMQPP_EXPORT wireformat
 		{
       uint64_t i = 0;
 			o.read(reinterpret_cast<char*>(&i), sizeof(i));
+      if (!o.good())
+      {
+        throw std::runtime_error("Unable to read uint64");
+      }
 			return byteswap(i);
 		}
 

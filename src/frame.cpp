@@ -44,6 +44,8 @@ boost::shared_ptr<frame> frame::read_frame(std::istream& i)
   {
     throw std::runtime_error("Framing error: no 0xCE end octet");
   }
+
+  return f;
 }
 
 void frame::write_frame(const frame& f, std::ostream& o)
@@ -64,8 +66,9 @@ frame::frame(frame_type type, uint16_t channel, const boost::asio::mutable_buffe
 }
 
 frame::frame(frame_type type, uint16_t channel, uint32_t payload_size) :
-  m_type(type), m_channel(channel), m_shared_buffer(boost::make_shared<scoped_buffer<char> >(payload_size)), m_buffer(m_shared_buffer->get_buffer())
+  m_type(type), m_channel(channel), m_shared_buffer(boost::make_shared<scoped_buffer<char> >(payload_size))
 {
+  m_buffer = m_shared_buffer->get_buffer();
 }
 
 frame::frame(frame_type type, uint16_t channel, shared_buffer_t& shared_payload) :

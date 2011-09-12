@@ -1,6 +1,8 @@
 #ifndef _LIBAMQPCPP_CONNECTION_H_INCLUDED_
 #define _LIBAMQPCPP_CONNECTION_H_INCLUDED_
 
+#define BOOST_ALL_NO_LIB
+
 #include "export.h"
 
 #include <boost/asio/io_service.hpp>

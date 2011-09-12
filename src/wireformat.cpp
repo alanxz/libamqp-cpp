@@ -181,7 +181,7 @@ amqpp::table wireformat::read_table(std::istream& i)
 {
     std::istringstream is(read_longstring(i));
     amqpp::table t;
-    while (!is.eof())
+    while (is.peek() != std::char_traits<char>::eof())
     {
       t.insert(wireformat::read_table_entry(is));
     }

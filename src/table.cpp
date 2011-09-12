@@ -1,4 +1,5 @@
 #include "table.h"
+#include "string_utils.h"
 
 #include <boost/mpl/at.hpp>
 #include <boost/mpl/map.hpp>
