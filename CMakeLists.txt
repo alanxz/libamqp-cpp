@@ -48,7 +48,7 @@ endif (GTEST_FOUND)
 
 
 add_subdirectory(src)
-
+add_subdirectory(examples)
 if (ENABLE_TESTING)
 	add_subdirectory(testing)
 endif (ENABLE_TESTING)
