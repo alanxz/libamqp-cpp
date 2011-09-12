@@ -54,8 +54,19 @@ void connection::connect()
 
   boost::shared_ptr<detail::method> method = detail::method::read(is);
 
+  // Here we should:
+  // - make sure version major/minor work
+  // - make sure the broker knows our locale
+  // - make sure the broker understands SASL-PLAIN
   std::cout << method->to_string();
 
+  methods::connection::start_ok reply;
+  reply.set_mechanism("PLAIN");
+  reply.set_response("");
+  reply.set_locale("en_US");
+
+  // Tune/tune-ok
+  // open/open-ok
 }
 
 } // namespace amqpp
