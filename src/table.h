@@ -36,6 +36,8 @@ public:
   table_impl_t& get_map() { return m_table; }
   const table_impl_t& get_map() const { return m_table; }
 
+  std::string to_string() const;
+
 private:
   table_impl_t m_table;
 };
@@ -120,7 +122,6 @@ public:
   explicit table_entry(const std::string& key, const field_value_t& data, field_type data_type);
   virtual ~table_entry();
 
-  // 
   inline bool operator<(const table_entry& r) const { return m_key < r.m_key; }
 
   inline const std::string& get_key() const { return m_key; }
@@ -129,6 +130,9 @@ public:
 
   static bool validate_key_name(const std::string& key);
   static bool validate_data_type(const field_value_t& data, field_type type);
+
+  std::string to_string() const;
+  static void table_entry::value_to_string(std::ostream& os, field_type type, const field_value_t& data);
 private:
   std::string m_key;
   field_value_t m_data;
