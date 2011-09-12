@@ -124,14 +124,64 @@ def genBody(spec):
         print "  return boost::shared_ptr<%s>();" % (method_name)
         print "}"
 
+    def getBitsLength(index, arguments):
+        start = index
+        while start > 0 and 'bit' == spec.resolveDomain(arguments[start - 1].domain):
+            start -= 1
+            
+        end = index
+        while end < len(arguments) and 'bit' == spec.resolveDomain(arguments[end].domain):
+            end += 1
+        
+        print >> sys.stderr, "bitlen %d %d" % (start, end)
+        return end - start
+    
+    def getBitsNumber(index, arguments):
+        start = index
+        while start > 0 and 'bit' == spec.resolveDomain(arguments[start - 1].domain):
+            start -= 1
+            
+        return index - start
+    
+    def getBitfieldSize(length):
+        if length <= 8:
+            return 8
+        elif length <=16:
+            return 16
+        elif length <= 32:
+            return 32
+        elif length <= 64:
+            return 64
+        else:
+            raise Exception
+        
+        
+    def genWriteBits(index, field, arguments):
+        print >> sys.stderr, "%s %s" % (field.method.name, field.name)
+        bit_number = getBitsNumber(index, arguments)
+        bit_length = getBitsLength(index, arguments)
+        bitfield_length = getBitfieldSize(bit_length)
+        if 0 == bit_number:
+            print "  {"
+            print "    uint%d_t bits = 0;" % (bitfield_length)
+        print "    bits = detail::set_bit(bits, m_%s, %d);" % (sanitizeName(field.name), bit_number)
+        if bit_number == (bit_length - 1):
+            print "    detail::wireformat::write_uint%d(o, bits);" % (bitfield_length)
+            print "  }"
+            
+    
     def genWriteFunction(method):
         method_name = sanitizeName(method.name)
         print "void %s::write(std::ostream& o) const" % (method_name)
         print "{"
         print "  detail::wireformat::write_uint16(o, static_cast<uint16_t>(%s::CLASS_ID));" % (method.klass.name)
         print "  detail::wireformat::write_uint16(o, static_cast<uint16_t>(%s::METHOD_ID));" % (method_name)
-        for f in method.arguments:
-            print "  detail::wireformat::write_%s(o, m_%s);" % (reader_writer[spec.resolveDomain(f.domain)], sanitizeName(f.name))
+        for index, field in enumerate(method.arguments):
+            domain = spec.resolveDomain(field.domain)
+            if domain == 'bit':
+                genWriteBits(index, field, method.arguments)
+            else:
+                print "  detail::wireformat::write_%s(o, m_%s);" % (reader_writer[spec.resolveDomain(field.domain)], sanitizeName(field.name))
         print "}"
         return
 

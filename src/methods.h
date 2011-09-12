@@ -4,8 +4,10 @@
 #include <boost/cstdint.hpp>
 #include <boost/shared_ptr.hpp>
 
-#include <string>
+#include <cassert>
 #include <limits>
+#include <string>
+#include <stdexcept>
 
 namespace amqpp {
 namespace detail {
@@ -39,6 +41,23 @@ inline void validate_longstring(const std::string& s)
 {
   if (s.length() > std::numeric_limits<uint32_t>::max())
     throw std::runtime_error("Long string cannot be longer than UINT_MAX bytes in length");
+}
+
+template <class T>
+inline T set_bit(T bitset, bool val, uint8_t position)
+{
+  assert(position < sizeof(T) * 8);
+  if (val)
+    return bitset | (1 << position);
+  else
+    return bitset & ~(1 << position);
+}
+
+template <class T>
+inline bool get_bit(T bitset, uint8_t position)
+{
+  assert(position < sizeof(T) * 8);
+  return (bitset & (1 << position)) != 0;
 }
 
 } // namespace detail
