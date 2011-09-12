@@ -13,10 +13,12 @@
 #include <vector>
 
 // This is here to stop errors from cropping up in MSVC 10
+#ifdef _MSC_VER
 namespace boost
 {
   struct recursive_variant_ {};
 }
+#endif // _MSC_VER
 
 namespace amqpp
 {
