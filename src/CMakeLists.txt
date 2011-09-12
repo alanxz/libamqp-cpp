@@ -27,6 +27,8 @@ include_directories(${CMAKE_CURRENT_SOURCE_DIR} ${CMAKE_CURRENT_BINARY_DIR})
 add_definitions(-DBOOST_ALL_NO_LIB)
 
 set(LIBAMQP_CPP_SRCS
+	bitset.h
+
 	byteswap.h
 
     connection.h
@@ -44,6 +46,8 @@ set(LIBAMQP_CPP_SRCS
     protocol_v091.cpp
 
     scoped_buffer.h
+
+	string_utils.h
 
     table.h
     table.cpp
