@@ -6,6 +6,7 @@
 
 #include <cassert>
 #include <limits>
+#include <sstream>
 #include <string>
 #include <stdexcept>
 
@@ -58,6 +59,13 @@ inline bool get_bit(T bitset, uint8_t position)
 {
   assert(position < sizeof(T) * 8);
   return (bitset & (1 << position)) != 0;
+}
+
+inline std::string print_string(const std::string& s)
+{
+  std::ostringstream o;
+  o << s.length() << ":\"" << s << "\"";
+  return o.str();
 }
 
 } // namespace detail

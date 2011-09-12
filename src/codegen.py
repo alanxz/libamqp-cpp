@@ -147,7 +147,13 @@ def genBody(spec):
         print "  std::ostringstream o;"
         print '  o << "class: %s<%d> method: %s<%d> {";' % (method.klass.name, method.klass.index, method.name, method.index)
         for field in method.arguments:
-            print '  o << "%s<%s>: " << get_%s() << " ";' % (field.name, spec.resolveDomain(field.domain), sanitizeName(field.name))
+            domain = spec.resolveDomain(field.domain)
+            if 'shortstr' == domain or 'longstr' == domain:
+                print '  o << "%s<%s>: " << detail::print_string(get_%s()) << " ";' % (field.name, domain, sanitizeName(field.name))
+            elif 'table' == domain:
+                print '  o << "%s<%s>: " << get_%s().to_string() << " ";' % (field.name, domain, sanitizeName(field.name))
+            else:
+                print '  o << "%s<%s>: " << get_%s() << " ";' % (field.name, domain, sanitizeName(field.name))
         print '  o << "}";'
         print "  return o.str();"
         print "}"
