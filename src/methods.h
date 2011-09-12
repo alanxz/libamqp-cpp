@@ -17,8 +17,8 @@ class method
 public:
     static boost::shared_ptr<method> read(std::istream& i);
 
-    virtual uint16_t get_class_id() const = 0;
-    virtual uint16_t get_method_id() const = 0;
+    virtual uint16_t class_id() const = 0;
+    virtual uint16_t method_id() const = 0;
 
     virtual void write(std::ostream& o) const = 0;
     virtual std::string to_string() const = 0;

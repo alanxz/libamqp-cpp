@@ -110,20 +110,6 @@ def genBody(spec):
                      'timestamp':'uint64'
                      }
 
-    def genPrintFunction(method):
-        method_name = sanitizeName(method.name)
-        print "std::string %s::to_string() const" % (method_name)
-        print "{"
-        print "  return std::string();"
-        print "}"
-
-    def genReadFunction(method):
-        method_name = sanitizeName(method.name)
-        print "boost::shared_ptr<%s> %s::read(std::istream& i)" % (method_name, method_name)
-        print "{"
-        print "  return boost::shared_ptr<%s>();" % (method_name)
-        print "}"
-
     def getBitsLength(index, arguments):
         start = index
         while start > 0 and 'bit' == spec.resolveDomain(arguments[start - 1].domain):
@@ -133,7 +119,6 @@ def genBody(spec):
         while end < len(arguments) and 'bit' == spec.resolveDomain(arguments[end].domain):
             end += 1
         
-        print >> sys.stderr, "bitlen %d %d" % (start, end)
         return end - start
     
     def getBitsNumber(index, arguments):
@@ -155,9 +140,43 @@ def genBody(spec):
         else:
             raise Exception
         
+    def genPrintFunction(method):
+        method_name = sanitizeName(method.name)
+        print "std::string %s::to_string() const" % (method_name)
+        print "{"
+        print "  return std::string();"
+        print "}"
+
+    def genReadBits(index, field, arguments):
+        bit_number = getBitsNumber(index, arguments)
+        bit_length = getBitsLength(index, arguments)
+        bitsfield_length = getBitfieldSize(bit_length)
+        if 0 == bit_number:
+            print "  {"
+            print "    uint%d_t bits = detail::wireformat::read_uint%d(i);" % (bitsfield_length, bitsfield_length)
+        print "    ptr->set_%s(detail::get_bit(bits, %d));" % (sanitizeName(field.name), bit_number)
+        if bit_number == (bit_length - 1):
+            print "  }"
+        
+    def genReadFunction(method):
+        method_name = sanitizeName(method.name)
+        print "boost::shared_ptr<%s> %s::read(std::istream& i)" % (method_name, method_name)
+        print "{"
+        print "  boost::shared_ptr<%s> ptr = boost::make_shared<%s>();" % (method_name, method_name)
+        for index, field in enumerate(method.arguments):
+            domain = spec.resolveDomain(field.domain)
+            if domain == 'bit':
+                genReadBits(index, field, method.arguments)
+            elif domain == 'table':
+                print "  ptr->get_%s() = detail::wireformat::read_table(i);" % (sanitizeName(field.name))
+            else:
+                print "  ptr->set_%s(detail::wireformat::read_%s(i));" % (sanitizeName(field.name), reader_writer[domain])
+        print "  return ptr;"
+        print "}"
+
+        
         
     def genWriteBits(index, field, arguments):
-        print >> sys.stderr, "%s %s" % (field.method.name, field.name)
         bit_number = getBitsNumber(index, arguments)
         bit_length = getBitsLength(index, arguments)
         bitfield_length = getBitfieldSize(bit_length)
@@ -181,7 +200,7 @@ def genBody(spec):
             if domain == 'bit':
                 genWriteBits(index, field, method.arguments)
             else:
-                print "  detail::wireformat::write_%s(o, m_%s);" % (reader_writer[spec.resolveDomain(field.domain)], sanitizeName(field.name))
+                print "  detail::wireformat::write_%s(o, m_%s);" % (reader_writer[domain], sanitizeName(field.name))
         print "}"
         return
 
