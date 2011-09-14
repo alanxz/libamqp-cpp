@@ -27,6 +27,9 @@ include_directories(${CMAKE_CURRENT_SOURCE_DIR} ${CMAKE_CURRENT_BINARY_DIR})
 add_definitions(-DBOOST_ALL_NO_LIB)
 
 set(LIBAMQP_CPP_SRCS
+	amqp_sasl.h
+	amqp_sasl.cpp
+
 	bitset.h
 
 	byteswap.h
