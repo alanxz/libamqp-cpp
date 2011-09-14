@@ -1,16 +1,20 @@
 #include "connection.h"
+#include "amqp_sasl.h"
 #include "frame.h"
 #include "methods.gen.h"
 
 #include <boost/array.hpp>
-#include <boost/asio/ip/tcp.hpp>
+#include <boost/asio/streambuf.hpp>
 #include <boost/asio/buffer.hpp>
+#include <boost/asio/ip/tcp.hpp>
 #include <boost/iostreams/device/array.hpp>
 #include <boost/iostreams/stream_buffer.hpp>
 #include <boost/lexical_cast.hpp>
 #include <boost/shared_ptr.hpp>
 
+#include <algorithm>
 #include <istream>
+#include <ostream>
 
 using boost::asio::ip::tcp;
 
@@ -54,19 +58,25 @@ void connection::connect()
 
   boost::shared_ptr<detail::method> method = detail::method::read(is);
 
-  // Here we should:
-  // - make sure version major/minor work
-  // - make sure the broker knows our locale
-  // - make sure the broker understands SASL-PLAIN
-  std::cout << method->to_string();
+  boost::shared_ptr<methods::connection::start> start_method = boost::shared_dynamic_cast<methods::connection::start>(method);
 
-  methods::connection::start_ok reply;
-  reply.set_mechanism("PLAIN");
-  reply.set_response("");
-  reply.set_locale("en_US");
+  if (0 != start_method->get_version_major() ||
+      9 != start_method->get_version_minor())
+  {
+    // fail
+  }
 
-  // Tune/tune-ok
-  // open/open-ok
+  methods::connection::start_ok start_ok;
+  std::string mechanism = sasl::select_sasl_mechanism(start_method->get_mechanisms());
+  start_ok.set_mechanism(mechanism);
+  start_ok.set_response(sasl::get_sasl_response(mechanism, m_username, m_password));
+
+  boost::asio::streambuf sb;
+  std::ostream os(&sb);
+  start_ok.write(os);
+
+  detail::frame out_frame(detail::frame::METHOD_TYPE, 0, sb.data());
+
 }
 
 } // namespace amqpp

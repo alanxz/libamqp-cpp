@@ -31,7 +31,7 @@ class AMQPP_EXPORT wireformat
 			o.read(reinterpret_cast<char*>(&i), sizeof(i));
       if (!o.good())
       {
-        throw std::runtime_error("Unable to read uint64");
+        throw std::runtime_error("Unable to read uint8");
       }
       return i;
 		}
@@ -89,9 +89,11 @@ class AMQPP_EXPORT wireformat
 
 		static void write_shortstring(std::ostream& o, const std::string& s);
 		static std::string read_shortstring(std::istream& o);
+    inline static uint32_t get_shortstring_wireformat_length(const std::string& s) { return sizeof(uint8_t) + s.length(); }
 
 		static void write_longstring(std::ostream& o, const std::string& s);
 		static std::string read_longstring(std::istream& o);
+    inline static uint32_t get_longstring_wireformat_length(const std::string& s) { return sizeof(uint32_t) + s.length(); }
 
     static void write_table(std::ostream& o, const amqpp::table& t);
     static amqpp::table read_table(std::istream& i);

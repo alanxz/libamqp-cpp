@@ -37,6 +37,7 @@ public:
   const table_impl_t& get_map() const { return m_table; }
 
   std::string to_string() const;
+  uint32_t serialized_size() const;
 
 private:
   table_impl_t m_table;
@@ -133,6 +134,8 @@ public:
 
   std::string to_string() const;
   static void table_entry::value_to_string(std::ostream& os, field_type type, const field_value_t& data);
+  uint32_t serialized_size() const;
+  static uint32_t get_serialized_data_size(const table_entry::field_value_t& data, const table_entry::field_type type);
 private:
   std::string m_key;
   field_value_t m_data;

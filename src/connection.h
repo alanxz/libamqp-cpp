@@ -9,6 +9,7 @@
 #include <boost/noncopyable.hpp>
 
 #include <string>
+#include <vector>
 
 namespace amqpp 
 {
@@ -33,6 +34,7 @@ class AMQPP_EXPORT connection : boost::noncopyable
 		const std::string m_password;
 
     boost::asio::io_service m_io_service;
+
 };
 } // namespace amqpp
 

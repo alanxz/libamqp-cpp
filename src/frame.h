@@ -2,7 +2,7 @@
 #define _LIBAMQPP_FRAME_H_INCLUDED_
 
 #include "scoped_buffer.h"
-
+#include "methods.gen.h"
 #include <boost/asio/buffer.hpp>
 #include <boost/cstdint.hpp>
 #include <boost/noncopyable.hpp>
@@ -21,10 +21,10 @@ public:
   static const uint8_t FRAME_END;
   enum frame_type 
   {
-    METHOD_TYPE = 1,
-    HEADER_TYPE = 2,
-    BODY_TYPE = 3,
-    HEARTBEAT_TYPE = 4
+    METHOD_TYPE = detail::FRAME_METHOD,
+    HEADER_TYPE = detail::FRAME_HEADER,
+    BODY_TYPE = detail::FRAME_BODY,
+    HEARTBEAT_TYPE = detail::FRAME_HEARTBEAT
   };
 
   typedef boost::shared_ptr<amqpp::detail::scoped_buffer<char> > shared_buffer_t;

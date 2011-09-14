@@ -1,5 +1,6 @@
 #include "table.h"
 #include "string_utils.h"
+#include "wireformat.h"
 
 #include <boost/mpl/at.hpp>
 #include <boost/mpl/map.hpp>
@@ -30,6 +31,18 @@ std::string table::to_string() const
   }
   os << "}";
   return os.str();
+}
+
+uint32_t table::serialized_size() const
+{
+  uint32_t size = 0;
+  for (table_impl_t::const_iterator it = m_table.begin();
+       it != m_table.end(); ++it)
+  {
+    size += sizeof(uint8_t) + it->first.length();
+    size += it->second.serialized_size();
+  }
+  return size;
 }
 table_entry::table_entry(const std::string& key, const field_value_t& data, field_type data_type) :
   m_key(key), m_data(data), m_type(data_type)
@@ -122,7 +135,6 @@ namespace detail
 
 bool table_entry::validate_data_type(const field_value_t& data, field_type type)
 {
-  detail::datatype_validator validator(type);
   return boost::apply_visitor(detail::datatype_validator(type), data);
 }
 
@@ -216,5 +228,71 @@ void table_entry::value_to_string(std::ostream& os, field_type type, const field
   default:
     throw std::runtime_error("Unknown type");
   }
+}
+
+uint32_t table_entry::serialized_size() const
+{
+  uint32_t size = sizeof(uint8_t) + m_key.length();
+  size += get_serialized_data_size(m_data, m_type);
+  return size;
+}
+
+namespace detail
+{
+  class datatype_size_counter : public boost::static_visitor<uint32_t>
+  {
+  private:
+    const table_entry::field_type m_type;
+  public:
+    explicit datatype_size_counter(table_entry::field_type type) : m_type(type) {}
+
+    template <class T>
+    uint32_t operator()(const T&) const
+    {
+      return sizeof(T);
+    }
+
+    uint32_t operator()(const bool) const
+    {
+      return sizeof(uint8_t);
+    }
+
+    uint32_t operator()(const std::string& v) const
+    {
+      if (table_entry::shortstring_type == m_type)
+        return wireformat::get_shortstring_wireformat_length(v);
+      else if (table_entry::longstring_type == m_type)
+        return wireformat::get_longstring_wireformat_length(v);
+      else
+        throw std::runtime_error("Datatype mismatch");
+    }
+
+    uint32_t operator()(const table_entry::field_array_t& a) const
+    {
+      uint32_t size = 0;
+      for (table_entry::field_array_t::const_iterator it = a.begin();
+           it != a.end(); ++it)
+      {
+        size += table_entry::get_serialized_data_size(it->first, it->second);
+      }
+      return size;
+    }
+
+    uint32_t operator()(const table& t) const
+    {
+      return t.serialized_size();
+    }
+
+    uint32_t operator()(const table_entry::void_t) const
+    {
+      return 0;
+    }
+  };
+}
+uint32_t table_entry::get_serialized_data_size(const table_entry::field_value_t& data, const table_entry::field_type type)
+{
+  uint32_t size = sizeof(uint8_t);
+  size += boost::apply_visitor(detail::datatype_size_counter(type), data);
+  return size;
 }
 } // namespace amqpp
