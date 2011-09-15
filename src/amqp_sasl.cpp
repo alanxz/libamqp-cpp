@@ -50,9 +50,9 @@ std::string sasl::get_plain_response(const std::string& username, const std::str
   }
 
   std::string res;
-  res.append('\0');
+  res.append(1, '\0');
   res.append(username);
-  res.append('\0');
+  res.append(1, '\0');
   res.append(password);
 
   return res;
