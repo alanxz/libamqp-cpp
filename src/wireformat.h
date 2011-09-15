@@ -9,6 +9,7 @@
 
 #include <istream>
 #include <ostream>
+#include <stdexcept>
 #include <string>
 #include <utility>
 

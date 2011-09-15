@@ -133,9 +133,9 @@ public:
   static bool validate_data_type(const field_value_t& data, field_type type);
 
   std::string to_string() const;
-  static void table_entry::value_to_string(std::ostream& os, field_type type, const field_value_t& data);
+  static void value_to_string(std::ostream& os, field_type type, const field_value_t& data);
   uint32_t serialized_size() const;
-  static uint32_t get_serialized_data_size(const table_entry::field_value_t& data, const table_entry::field_type type);
+  static uint32_t get_serialized_data_size(const field_value_t& data, const field_type type);
 private:
   std::string m_key;
   field_value_t m_data;

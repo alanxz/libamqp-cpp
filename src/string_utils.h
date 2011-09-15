@@ -6,6 +6,7 @@
 #include <limits>
 #include <string>
 #include <sstream>
+#include <stdexcept>
 
 namespace amqpp
 {
