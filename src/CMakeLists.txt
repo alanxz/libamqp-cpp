@@ -45,9 +45,6 @@ set(LIBAMQP_CPP_SRCS
     methods.h
     methods.cpp
 
-    protocol_v091.h
-    protocol_v091.cpp
-
     scoped_buffer.h
 
 	string_utils.h
