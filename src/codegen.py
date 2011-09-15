@@ -69,7 +69,7 @@ def genHeader(spec):
         elif (amqp_type == 'shortstr'):
             print "    inline void set_%s(const std::string& s) { detail::validate_shortstring(s); m_%s = s; }" % (name, name)
         elif (amqp_type == 'longstr'):
-            print "    inline void set_%s(const std::string& s) { detail::validate_shortstring(s); m_%s = s; }" % (name, name)
+            print "    inline void set_%s(const std::string& s) { detail::validate_longstring(s); m_%s = s; }" % (name, name)
         else:
             type = types[amqp_type]
             print "    inline void set_%s(%s v) { m_%s = v; }" % (name, type, name)
