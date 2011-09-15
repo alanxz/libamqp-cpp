@@ -41,6 +41,7 @@ void connection::connect()
 
   static const boost::array<char, 8> handshake = { { 'A', 'M', 'Q', 'P', 0, 0, 9, 1 } };
   io.write(handshake.data(), handshake.size());
+  io.flush();
 
   char resp = io.peek();
 
@@ -51,12 +52,7 @@ void connection::connect()
 
   boost::shared_ptr<detail::frame> fr = detail::frame::read_frame(io);
 
-  boost::iostreams::stream_buffer<boost::iostreams::array_source> frame_streambuf(boost::asio::buffer_cast<char*>(fr->get_payload_data()), fr->get_payload_size());
-
-  std::istream is(&frame_streambuf);
-  is.exceptions(std::ios::failbit | std::ios::badbit | std::ios::eofbit);
-
-  boost::shared_ptr<detail::method> method = detail::method::read(is);
+  boost::shared_ptr<detail::method> method = detail::method::read(*fr);
 
   boost::shared_ptr<methods::connection::start> start_method = boost::shared_dynamic_cast<methods::connection::start>(method);
 
@@ -71,12 +67,14 @@ void connection::connect()
   start_ok.set_mechanism(mechanism);
   start_ok.set_response(sasl::get_sasl_response(mechanism, m_username, m_password));
 
-  boost::asio::streambuf sb;
-  std::ostream os(&sb);
-  start_ok.write(os);
+  detail::frame start_ok_frame(0, start_ok);
 
-  detail::frame out_frame(detail::frame::METHOD_TYPE, 0, sb.data());
+  start_ok_frame.write(io);
+  io.flush();
 
+  fr = detail::frame::read_frame(io);
+  boost::shared_ptr<detail::method> tune = detail::method::read(*fr);
+  std::cout << tune->to_string();
 }
 
 } // namespace amqpp

@@ -1,7 +1,9 @@
 #ifndef _LIBAMQPCPP_CONNECTION_H_INCLUDED_
 #define _LIBAMQPCPP_CONNECTION_H_INCLUDED_
 
-#define BOOST_ALL_NO_LIB
+#ifndef BOOST_ALL_NO_LIB
+# define BOOST_ALL_NO_LIB
+#endif
 
 #include "export.h"
 
