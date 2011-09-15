@@ -13,6 +13,11 @@
 #include <string>
 #include <vector>
 
+#ifdef _MSC_VER
+# pragma warning ( push )
+# pragma warning ( disable: 4275 4251 )
+#endif
+
 namespace amqpp 
 {
 
@@ -40,4 +45,7 @@ class AMQPP_EXPORT connection : boost::noncopyable
 };
 } // namespace amqpp
 
+#ifdef _MSC_VER
+# pragma warning ( pop )
+#endif
 #endif // _LIBAMQPCPP_CONNECTION_H_INCLUDED_

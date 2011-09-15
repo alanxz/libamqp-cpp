@@ -79,16 +79,22 @@ def genHeader(spec):
 #ifndef _LIBAMQPP_METHODS_GEN_H_INCLUDED_
 #define _LIBAMQPP_METHODS_GEN_H_INCLUDED_
 
+#include "export.h"
 #include "methods.h"
 #include "string_utils.h"
 #include "table.h"
 
 #include <boost/cstdint.hpp>
+#include <boost/make_shared.hpp>
 #include <boost/shared_ptr.hpp>
 
 #include <iosfwd>
 #include <string>
 
+#ifdef _MSC_VER
+# pragma warning ( push )
+# pragma warning ( disable: 4251 )
+#endif
 namespace amqpp
 {
 namespace detail
@@ -105,17 +111,24 @@ namespace methods
         print "  enum { CLASS_ID = %d };" % (c.index)
         for m in c.methods:
             method_name = sanitizeName(m.name)
-            print "  class %s : public detail::method" % (method_name)
+            print "  class AMQPP_EXPORT %s : public detail::method" % (method_name)
             print "  {"
             print "  public:"
+            print "    typedef boost::shared_ptr<%s> ptr_t;" % (method_name)
             print "    enum { METHOD_ID = %d };" % (m.index)
+            print "    static ptr_t create() { return boost::make_shared<%s>(); }" % (method_name)
+            print "    %s();" % (method_name)
+            print "    virtual ~%s() {};" % (method_name)
+            print ""
             print "    virtual uint16_t class_id() const { return %s::CLASS_ID; }" % (c.name)
             print "    virtual uint16_t method_id() const { return %s::METHOD_ID; }" % (method_name)
             print ""
-            print "    static boost::shared_ptr<%s> read(std::istream& i);" % (method_name)
+            print "    static ptr_t read(std::istream& i);"
             print "    virtual void write(std::ostream& o) const;"
+            print ""
             print "    virtual uint32_t get_serialized_size() const;"
             print "    virtual std::string to_string() const;"
+            print ""
             for f in m.arguments:
                 genGetter(f)
                 genSetter(f)
@@ -129,6 +142,9 @@ namespace methods
         print ""
 
     print """} // namespace methods
+#ifdef _MSC_VER
+# pragma warning ( pop )
+#endif
 } // namespace amqpp
 #endif // _LIBAMQPP_METHODS_GEN_H_INCLUDED_
 """
@@ -177,7 +193,7 @@ def genBody(spec):
             raise Exception
 
     def genReadTopLevelFunction():
-        print "boost::shared_ptr<method> method::read(std::istream& i)"
+        print "method::ptr_t method::read(std::istream& i)"
         print "{"
         print "  uint16_t class_id = wireformat::read_uint16(i);"
         print "  uint16_t method_id = wireformat::read_uint16(i);"
@@ -198,6 +214,27 @@ def genBody(spec):
         print "  }"
         print "}"
         
+    def genDefaultValue(field):
+        domain = spec.resolveDomain(field.domain)
+        if 'shortstr' == domain or 'longstr' == domain:
+            return '"%s"' % (field.defaultvalue)
+        elif 'bit' == domain:
+            return 'true' if field.defaultvalue else 'false'
+        else:
+            return field.defaultvalue
+
+    def genConstructor(method):
+        method_name = sanitizeName(method.name)
+        print "%s::%s()" % (method_name, method_name)
+        arg_delimiter = ': '
+        for field in method.arguments:
+            domain = spec.resolveDomain(field.domain)
+            if field.defaultvalue is not None and domain != 'table':
+                print " %s m_%s(%s)" % (arg_delimiter, sanitizeName(field.name), genDefaultValue(field))
+                arg_delimiter = ', '
+        print "{"
+        print "}"
+
     def genPrintFunction(method):
         method_name = sanitizeName(method.name)
         print "std::string %s::to_string() const" % (method_name)
@@ -225,24 +262,24 @@ def genBody(spec):
         if 0 == bit_number:
             print "  {"
             print "    uint%d_t bits = detail::wireformat::read_uint%d(i);" % (bitsfield_length, bitsfield_length)
-        print "    ptr->set_%s(detail::get_bit(bits, %d));" % (sanitizeName(field.name), bit_number)
+        print "    ret->set_%s(detail::get_bit(bits, %d));" % (sanitizeName(field.name), bit_number)
         if bit_number == (bit_length - 1):
             print "  }"
         
     def genReadFunction(method):
         method_name = sanitizeName(method.name)
-        print "boost::shared_ptr<%s> %s::read(std::istream& i)" % (method_name, method_name)
+        print "%s::ptr_t %s::read(std::istream& i)" % (method_name, method_name)
         print "{"
-        print "  boost::shared_ptr<%s> ptr = boost::make_shared<%s>();" % (method_name, method_name)
+        print "  %s::ptr_t ret = boost::make_shared<%s>();" % (method_name, method_name)
         for index, field in enumerate(method.arguments):
             domain = spec.resolveDomain(field.domain)
             if domain == 'bit':
                 genReadBits(index, field, method.arguments)
             elif domain == 'table':
-                print "  ptr->get_%s() = detail::wireformat::read_table(i);" % (sanitizeName(field.name))
+                print "  ret->get_%s() = detail::wireformat::read_table(i);" % (sanitizeName(field.name))
             else:
-                print "  ptr->set_%s(detail::wireformat::read_%s(i));" % (sanitizeName(field.name), reader_writer[domain])
-        print "  return ptr;"
+                print "  ret->set_%s(detail::wireformat::read_%s(i));" % (sanitizeName(field.name), reader_writer[domain])
+        print "  return ret;"
         print "}"
 
         
@@ -332,6 +369,8 @@ namespace methods
         print "namespace %s" % (c.name)
         print "{"
         for m in c.methods:
+            genConstructor(m)
+            print ""
             genPrintFunction(m)
             print ""
             genReadFunction(m)

@@ -9,11 +9,11 @@ namespace amqpp {
 namespace detail {
 
 
-boost::shared_ptr<method> method::read(const frame& f)
+method::ptr_t method::read(const frame::ptr_t f)
 {
   typedef boost::iostreams::stream<boost::iostreams::array_source> array_istream;
 
-  array_istream is(boost::asio::buffer_cast<char*>(f.get_payload_data()), f.get_payload_size());
+  array_istream is(boost::asio::buffer_cast<char*>(f->get_payload_data()), f->get_payload_size());
 
   return read(is);
 }

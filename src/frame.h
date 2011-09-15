@@ -1,22 +1,29 @@
 #ifndef _LIBAMQPP_FRAME_H_INCLUDED_
 #define _LIBAMQPP_FRAME_H_INCLUDED_
 
+#include "export.h"
 #include "scoped_buffer.h"
 #include "methods.h"
 #include "methods.gen.h"
 #include <boost/asio/buffer.hpp>
 #include <boost/cstdint.hpp>
 #include <boost/noncopyable.hpp>
+#include <boost/enable_shared_from_this.hpp>
 #include <boost/shared_ptr.hpp>
 
 #include <iosfwd>
+
+#ifdef _MSC_VER
+# pragma warning ( push )
+# pragma warning ( disable: 4275 4251 )
+#endif
 
 namespace amqpp
 {
 namespace detail
 {
 
-class frame : boost::noncopyable
+class AMQPP_EXPORT frame : boost::noncopyable, public boost::enable_shared_from_this<frame>
 {
 public:
   static const uint8_t FRAME_END;
@@ -28,14 +35,16 @@ public:
     HEARTBEAT_TYPE = detail::FRAME_HEARTBEAT
   };
 
+  typedef boost::shared_ptr<frame> ptr_t;
   typedef boost::shared_ptr<amqpp::detail::scoped_buffer<char> > shared_buffer_t;
 
   static frame_type get_frame_type(const uint8_t val);
 
-  static boost::shared_ptr<frame> read_frame(std::istream& i);
+  static ptr_t read_frame(std::istream& i);
+  static ptr_t create_from_method(uint16_t channel, const detail::method::ptr_t method);
+
   void write(std::ostream& o) const;
 
-  frame(uint16_t channel, const detail::method& method);
   frame(frame_type type, uint16_t channel, const boost::asio::mutable_buffer& payload);
   frame(frame_type type, uint16_t channel, uint32_t payload_size);
   frame(frame_type type, uint16_t channel, boost::shared_ptr<scoped_buffer<char> >& shared_payload);
@@ -47,7 +56,7 @@ public:
   inline uint16_t get_channel() const { return m_channel; }
   inline void set_channel(uint16_t val) { m_channel = val; }
 
-  inline uint32_t get_payload_size() const { return boost::asio::buffer_size(m_buffer); }
+  inline uint32_t get_payload_size() const { return static_cast<uint32_t>(boost::asio::buffer_size(m_buffer)); }
   inline boost::asio::mutable_buffer get_payload_data() const { return m_buffer; }
 
   inline bool have_shared_buffer() const { return shared_buffer_t() == m_shared_buffer; }
@@ -56,11 +65,15 @@ public:
 private:
   frame_type m_type;
   uint16_t m_channel;
+  shared_buffer_t m_shared_buffer;
   boost::asio::mutable_buffer m_buffer;
 
-  shared_buffer_t m_shared_buffer;
 };
 
 } // namespace detail
 } // namespace amqpp
+
+#ifdef _MSC_VER
+# pragma warning ( pop )
+#endif
 #endif // _LIBAMQPP_FRAME_H_INCLUDED_

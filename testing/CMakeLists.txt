@@ -13,3 +13,11 @@ add_test(test_wireformat test_wireformat)
 add_executable(test_table table_test.cpp)
 target_link_libraries(test_table amqp-cpp ${GTEST_BOTH_LIBRARIES})
 add_test(test_table test_table)
+
+add_executable(test_method method_test.cpp)
+target_link_libraries(test_method amqp-cpp ${GTEST_BOTH_LIBRARIES})
+add_test(test_method test_method)
+
+add_executable(test_frame frame_test.cpp)
+target_link_libraries(test_frame amqp-cpp ${GTEST_BOTH_LIBRARIES})
+add_test(test_frame test_frame)

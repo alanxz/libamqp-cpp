@@ -24,6 +24,11 @@ void wireformat::write_shortstring(std::ostream& o, const std::string& s)
 	uint8_t len = static_cast<uint8_t>(s.length());
 	write_uint8(o, len);
 	o.write(s.data(), s.length());
+  
+  if (!o.good())
+  {
+    throw std::runtime_error("Write failure");
+  }
 }
 
 std::string wireformat::read_shortstring(std::istream& i)
@@ -52,6 +57,10 @@ void wireformat::write_longstring(std::ostream& o, const std::string& s)
 	uint32_t len = static_cast<uint32_t>(s.length());
 	write_uint32(o, len);
 	o.write(s.data(), len);
+  if (!o.good())
+  {
+    throw std::runtime_error("Write failure");
+  }
 }
 
 std::string wireformat::read_longstring(std::istream& i)
@@ -94,6 +103,10 @@ void wireformat::write_table(std::ostream& o, const table& t)
     write_table_entry(os, it->second);
   }
   write_longstring(o, os.str());
+  if (!o.good())
+  {
+    throw std::runtime_error("Write Failure");
+  }
 }
 
 void wireformat::write_table_entry(std::ostream& o, const table_entry& e)

@@ -12,6 +12,11 @@
 #include <utility>
 #include <vector>
 
+#ifdef _MSC_VER
+# pragma warning ( push )
+# pragma warning ( disable: 4251 )
+#endif
+
 // This is here to stop errors from cropping up in MSVC 10
 #ifdef _MSC_VER
 namespace boost
@@ -143,4 +148,8 @@ private:
 };
 
 } // namespace amqpp
+
+#ifdef _MSC_VER
+# pragma warning ( pop )
+#endif
 #endif // _AMQPP_TABLE_H_INCLUDED_

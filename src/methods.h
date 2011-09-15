@@ -1,23 +1,34 @@
 #ifndef AMQPP_DETAIL_METHODS_H
 #define AMQPP_DETAIL_METHODS_H
 
+#include "export.h"
+
 #include <boost/cstdint.hpp>
+#include <boost/enable_shared_from_this.hpp>
 #include <boost/shared_ptr.hpp>
 
 #include <string>
 #include <iosfwd>
 
+#ifdef _MSC_VER
+# pragma warning ( push )
+# pragma warning ( disable: 4251 )
+#endif
+
 namespace amqpp {
 namespace detail {
 
 class frame;
+typedef boost::shared_ptr<frame> frame_ptr_t;
 
-class method
+class AMQPP_EXPORT method : public boost::enable_shared_from_this<method>
 {
 public:
-    static boost::shared_ptr<method> read(const frame& f);
-    // This is actually defined in methods.gen.cpp
-    static boost::shared_ptr<method> read(std::istream& i);
+  typedef boost::shared_ptr<method> ptr_t;
+  static ptr_t read(const frame_ptr_t f);
+
+  // This is actually defined in methods.gen.cpp
+  static ptr_t read(std::istream& i);
 
     virtual uint16_t class_id() const = 0;
     virtual uint16_t method_id() const = 0;
@@ -27,7 +38,22 @@ public:
     virtual std::string to_string() const = 0;
 };
 
+template <class T>
+typename T::ptr_t method_cast(const method::ptr_t& m)
+{
+  T::ptr_t ret = boost::shared_dynamic_cast<T>(m);
+  if (T::ptr_t() == ret)
+  {
+    throw std::runtime_error("Failure to cast method");
+  }
+  return ret;
+}
+
 } // namespace detail
 } // namespace amqpp
+
+#ifdef _MSC_VER
+# pragma warning ( pop )
+#endif
 
 #endif // AMQPP_DETAIL_METHODS_H

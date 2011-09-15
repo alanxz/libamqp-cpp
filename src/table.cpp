@@ -35,12 +35,11 @@ std::string table::to_string() const
 
 uint32_t table::serialized_size() const
 {
-  uint32_t size = 0;
+  uint32_t size = sizeof(uint32_t); // header
   for (table_impl_t::const_iterator it = m_table.begin();
        it != m_table.end(); ++it)
   {
-    size += sizeof(uint8_t) + it->first.length();
-    size += it->second.serialized_size();
+    size += it->second.serialized_size(); // Table entry value
   }
   return size;
 }
@@ -232,7 +231,7 @@ void table_entry::value_to_string(std::ostream& os, field_type type, const field
 
 uint32_t table_entry::serialized_size() const
 {
-  uint32_t size = sizeof(uint8_t) + m_key.length();
+  uint32_t size = sizeof(uint8_t) + static_cast<uint32_t>(m_key.length());
   size += get_serialized_data_size(m_data, m_type);
   return size;
 }
@@ -291,7 +290,7 @@ namespace detail
 }
 uint32_t table_entry::get_serialized_data_size(const table_entry::field_value_t& data, const table_entry::field_type type)
 {
-  uint32_t size = sizeof(uint8_t);
+  uint32_t size = sizeof(uint8_t); // size of datatype
   size += boost::apply_visitor(detail::datatype_size_counter(type), data);
   return size;
 }
