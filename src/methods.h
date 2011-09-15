@@ -10,9 +10,12 @@
 namespace amqpp {
 namespace detail {
 
+class frame;
+
 class method
 {
 public:
+    static boost::shared_ptr<method> read(const frame& f);
     // This is actually defined in methods.gen.cpp
     static boost::shared_ptr<method> read(std::istream& i);
 

@@ -2,7 +2,10 @@
 
 #include "wireformat.h"
 
+#include <boost/iostreams/device/array.hpp>
+#include <boost/iostreams/stream.hpp>
 #include <boost/make_shared.hpp>
+
 #include <istream>
 #include <ostream>
 #include <stdexcept>
@@ -48,16 +51,28 @@ boost::shared_ptr<frame> frame::read_frame(std::istream& i)
   return f;
 }
 
-void frame::write_frame(const frame& f, std::ostream& o)
+void frame::write(std::ostream& o) const
 {
-  wireformat::write_uint8(o, static_cast<uint8_t>(f.get_type()));
-  wireformat::write_uint16(o, f.get_channel());
-  wireformat::write_uint32(o, f.get_payload_size());
+  wireformat::write_uint8(o, static_cast<uint8_t>(get_type()));
+  wireformat::write_uint16(o, get_channel());
+  wireformat::write_uint32(o, get_payload_size());
 
-  o.write(boost::asio::buffer_cast<char*>(f.get_payload_data()), boost::asio::buffer_size(f.get_payload_data()));
+  o.write(boost::asio::buffer_cast<char*>(get_payload_data()), boost::asio::buffer_size(get_payload_data()));
 
   wireformat::write_uint8(o, FRAME_END);
   o.flush();
+}
+
+frame::frame(uint16_t channel, const detail::method& method) :
+  m_type(frame::METHOD_TYPE),
+  m_channel(channel),
+  m_shared_buffer(boost::make_shared<scoped_buffer<char> > (method.get_serialized_size()))
+{
+  typedef boost::iostreams::stream<boost::iostreams::array_sink> array_stream;
+
+  array_stream os(m_shared_buffer->get_data(), m_shared_buffer->get_size());
+
+  method.write(os);
 }
 
 frame::frame(frame_type type, uint16_t channel, const boost::asio::mutable_buffer& payload) :

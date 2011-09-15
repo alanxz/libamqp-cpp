@@ -2,6 +2,7 @@
 #define _LIBAMQPP_FRAME_H_INCLUDED_
 
 #include "scoped_buffer.h"
+#include "methods.h"
 #include "methods.gen.h"
 #include <boost/asio/buffer.hpp>
 #include <boost/cstdint.hpp>
@@ -32,8 +33,9 @@ public:
   static frame_type get_frame_type(const uint8_t val);
 
   static boost::shared_ptr<frame> read_frame(std::istream& i);
-  static void write_frame(const frame& f, std::ostream& o);
+  void write(std::ostream& o) const;
 
+  frame(uint16_t channel, const detail::method& method);
   frame(frame_type type, uint16_t channel, const boost::asio::mutable_buffer& payload);
   frame(frame_type type, uint16_t channel, uint32_t payload_size);
   frame(frame_type type, uint16_t channel, boost::shared_ptr<scoped_buffer<char> >& shared_payload);
