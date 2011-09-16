@@ -2,6 +2,8 @@
 #include "amqp_sasl.h"
 #include "frame.h"
 #include "methods.gen.h"
+#include "table.h"
+#include "table_entry.h"
 
 #include <boost/array.hpp>
 #include <boost/asio/streambuf.hpp>
@@ -64,11 +66,11 @@ void connection::connect()
   std::cout << std::endl;
 
   methods::connection::start_ok::ptr_t start_ok = methods::connection::start_ok::create();
-  start_ok->get_client_properties().insert(table_entry("product", table_entry::field_value_t(std::string("libamqp-cpp")), table_entry::longstring_type));
-  start_ok->get_client_properties().insert(table_entry("version", table_entry::field_value_t(std::string("v1.0b")), table_entry::longstring_type));
-  start_ok->get_client_properties().insert(table_entry("platform", table_entry::field_value_t(std::string("c++")), table_entry::longstring_type));
-  start_ok->get_client_properties().insert(table_entry("copyright", table_entry::field_value_t(std::string("Alan Antonuk (c) 2011")), table_entry::longstring_type));
-  start_ok->get_client_properties().insert(table_entry("information", table_entry::field_value_t(std::string("http://github.com/alanxz/libamqp-cpp")), table_entry::longstring_type));
+  //start_ok->get_client_properties().insert(table_entry("product", table_entry::field_value_t(std::string("libamqp-cpp")), table_entry::longstring_type));
+  //start_ok->get_client_properties().insert(table_entry("version", table_entry::field_value_t(std::string("v1.0b")), table_entry::longstring_type));
+  //start_ok->get_client_properties().insert(table_entry("platform", table_entry::field_value_t(std::string("c++")), table_entry::longstring_type));
+  //start_ok->get_client_properties().insert(table_entry("copyright", table_entry::field_value_t(std::string("Alan Antonuk (c) 2011")), table_entry::longstring_type));
+  //start_ok->get_client_properties().insert(table_entry("information", table_entry::field_value_t(std::string("http://github.com/alanxz/libamqp-cpp")), table_entry::longstring_type));
 
   std::string mechanism = sasl::select_sasl_mechanism(start_method->get_mechanisms());
   start_ok->set_mechanism(mechanism);

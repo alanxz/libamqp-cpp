@@ -52,6 +52,9 @@ set(LIBAMQP_CPP_SRCS
     table.h
     table.cpp
 
+    table_entry.h
+    table_entry.cpp
+
     wireformat.h
     wireformat.cpp
 

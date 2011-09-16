@@ -1,6 +1,7 @@
 
 include_directories(${GTEST_INCLUDE_DIRS})
 include_directories(../src)
+include_directories(${CMAKE_BINARY_DIR}/src)
 
 add_executable(test_byteswap byteswap_test.cpp)
 target_link_libraries(test_byteswap amqp-cpp ${GTEST_BOTH_LIBRARIES})

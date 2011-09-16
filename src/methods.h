@@ -7,8 +7,9 @@
 #include <boost/enable_shared_from_this.hpp>
 #include <boost/shared_ptr.hpp>
 
-#include <string>
 #include <iosfwd>
+#include <stdexcept>
+#include <string>
 
 #ifdef _MSC_VER
 # pragma warning ( push )
@@ -41,8 +42,8 @@ public:
 template <class T>
 typename T::ptr_t method_cast(const method::ptr_t& m)
 {
-  T::ptr_t ret = boost::shared_dynamic_cast<T>(m);
-  if (T::ptr_t() == ret)
+  typename T::ptr_t ret = boost::shared_dynamic_cast<T>(m);
+  if (typename T::ptr_t() == ret)
   {
     throw std::runtime_error("Failure to cast method");
   }
