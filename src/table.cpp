@@ -1,4 +1,5 @@
 #include "table.h"
+
 #include "string_utils.h"
 #include "table_entry.h"
 #include "wireformat.h"
@@ -27,13 +28,13 @@ std::string table::to_string() const
   return os.str();
 }
 
-uint32_t table::serialized_size() const
+uint32_t table::wireformat_size() const
 {
   uint32_t size = sizeof(uint32_t); // header
   for (table_impl_t::const_iterator it = m_table.begin();
        it != m_table.end(); ++it)
   {
-    size += it->serialized_size(); // Table entry value
+    size += it->second.wireformat_size(); // Table entry value
   }
   return size;
 }

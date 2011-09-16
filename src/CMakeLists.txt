@@ -37,6 +37,8 @@ set(LIBAMQP_CPP_SRCS
     connection.h
     connection.cpp
 
+	exception.h
+
     export.h
 
     frame.h

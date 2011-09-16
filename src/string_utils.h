@@ -39,6 +39,16 @@ inline std::string print_string(const std::string& s)
   return o.str();
 }
 
+inline uint32_t wireformat_size_shortstring(const std::string& s) 
+{ 
+  return sizeof(uint8_t) + static_cast<uint32_t>(s.length());
+}
+
+inline uint32_t wireformat_size_longstring(const std::string& s)
+{
+  return sizeof(uint32_t) + static_cast<uint32_t>(s.length());
+}
+
 } // namespace detail
 } // namespace amqpp
 #endif // _LIBAMQPP_STRING_H_INCLUDED_

@@ -106,22 +106,18 @@ class AMQPP_EXPORT wireformat
 
 		static void write_shortstring(std::ostream& o, const std::string& s);
 		static std::string read_shortstring(std::istream& o);
-    inline static uint32_t get_shortstring_wireformat_length(const std::string& s) { return sizeof(uint8_t) + static_cast<uint32_t>(s.length()); }
 
 		static void write_longstring(std::ostream& o, const std::string& s);
 		static std::string read_longstring(std::istream& o);
-    inline static uint32_t get_longstring_wireformat_length(const std::string& s) { return sizeof(uint32_t) + static_cast<uint32_t>(s.length()); }
 
     static void write_table(std::ostream& o, const amqpp::table& t);
     static amqpp::table read_table(std::istream& i);
 
-  static void write_table_entry(std::ostream& o, const table_entry& e);
-  static void write_table_value(std::ostream& o, table_entry::field_type t, const table_entry::field_value_t& d);
+    static void write_table_entry(std::ostream& o, const table_entry& e);
+    static void write_table_value(std::ostream& o, const table_entry::field_value_t& d);
 
-private:
-
-  static table_entry read_table_entry(std::istream& i);
-  static std::pair<table_entry::field_value_t, table_entry::field_type> read_field_value(std::istream& i);
+    static table_entry read_table_entry(std::istream& i);
+    static table_entry::field_value_t read_field_value(std::istream& i);
 
 };
 } // namespace detail

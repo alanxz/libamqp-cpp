@@ -1,4 +1,5 @@
 #include "table_entry.h"
+#include "string_utils.h"
 
 #include <boost/mpl/at.hpp>
 #include <boost/mpl/int.hpp>
@@ -8,6 +9,10 @@
 
 #include <boost/variant/apply_visitor.hpp>
 #include <boost/variant/static_visitor.hpp>
+
+#include <iomanip>
+#include <istream>
+#include <ostream>
 
 namespace amqpp {
 
@@ -40,7 +45,7 @@ namespace detail
     table_entry::field_type operator()(const T&) const
     {
       typedef typename mpl::at<field_type_to_field_value_t_map, T>::type enum_type;
-      return enum_type::value;
+      return table_entry::field_type(enum_type::value);
     }
   };
 
@@ -60,23 +65,23 @@ namespace detail
 
     uint32_t operator()(const std::string& v) const
     {
-      return wireformat::get_longstring_wireformat_length(v);
+      return detail::wireformat_size_longstring(v);
     }
 
-    uint32_t operator()(const table_entry::field_array_t& a) const
+    uint32_t operator()(const table_entry::array_t& a) const
     {
       uint32_t size = 0;
-      for (table_entry::field_array_t::const_iterator it = a.begin();
+      for (table_entry::array_t::const_iterator it = a.begin();
            it != a.end(); ++it)
       {
-        size += table_entry::get_serialized_data_size(it->first, it->second);
+        size += table_entry::wireformat_data_size(*it);
       }
       return size;
     }
 
     uint32_t operator()(const table& t) const
     {
-      return t.serialized_size();
+      return t.wireformat_size();
     }
 
     uint32_t operator()(const table_entry::void_t) const
@@ -86,84 +91,81 @@ namespace detail
 
     uint32_t operator()(const table_entry::bytes_t& v) const
     {
-      return sizeof(uint32_t) + sizeof(uint8_t) * v.size();
+      return sizeof(uint32_t) + sizeof(uint8_t) * static_cast<uint32_t>(v.size());
     }
   };
 
   typedef mpl::map<
-    mpl::pair<int8_t,                  mpl::string<'<int8>: '> >,
-    mpl::pair<int16_t,                 mpl::string<'<int16>: '> >,
-    mpl::pair<int32_t,                 mpl::string<'<int32>: '> >,
-    mpl::pair<int64_t,                 mpl::string<'<int64>: '> >,
-    mpl::pair<float,                   mpl::string<'<float>: '> >,
-    mpl::pair<double,                  mpl::string<'<double>: '> >,
-    mpl::pair<table_entry::timestamp_t,mpl::string<'<timestamp>: '> >,
-    mpl::pair<table,                   mpl::int_<table_entry::fieldtable_type> >,
-    mpl::pair<table_entry::void_t,     mpl::int_<table_entry::void_type> >,
-    mpl::pair<table_entry::bytes_t,    mpl::int_<table_entry::bytes_type> >
+    mpl::pair<int8_t,                  mpl::string<'<int','8>: '> >,
+    mpl::pair<int16_t,                 mpl::string<'<int','16>:',' '> >,
+    mpl::pair<int32_t,                 mpl::string<'<int','32>:',' '> >,
+    mpl::pair<int64_t,                 mpl::string<'<int','64>:',' '> >,
+    mpl::pair<float,                   mpl::string<'<flo','at>:',' '> >,
+    mpl::pair<double,                  mpl::string<'<dou','ble>',': '> >,
+    mpl::pair<table_entry::timestamp_t,mpl::string<'<tim','esta','mp>:',' '> >
   > field_type_to_string_t;
+  
   class data_stringifier : public boost::static_visitor<void>
   {
     private:
       std::ostream& os;
     public:
-      explicit datatype_serializer(std::ostream& o) : os(o) {}
+      explicit data_stringifier(std::ostream& o) : os(o) {}
 
       template <class T>
-      void operator()(T d)
+      void operator()(T d) const
       {
         typedef typename mpl::at<field_type_to_string_t, T>::type field_type_name;
-        os << field_type_name::value << d;
+        os << mpl::c_str<field_type_name>::value << d;
       }
 
-      void operator()(bool d)
+      void operator()(bool d) const
       {
         os << "<boolean>: " << (d ? "true" : "false");
       }
 
-      void operator()(table_entry::decimal_t d)
+      void operator()(table_entry::decimal_t d) const
       {
         os << "<decimal>: mag: " << static_cast<unsigned int>(d.first) << " val: " << d.second;
       }
 
-      void operator()(const std::string& s)
+      void operator()(const std::string& s) const
       {
         os << "<longstring>: len:" << s.length() << " \"" << s << "\"";
       }
 
-      void operator()(const table_entry::array_t& a)
+      void operator()(const table_entry::array_t& a) const
       {
         os << "<fieldarray>: len:" << a.size() << " {";
         for (table_entry::array_t::const_iterator it = a.begin();
              it != a.end(); ++it)
         {
-          value_to_string(os, *it);
+          table_entry::value_to_string(os, *it);
           os << ", ";
         }
         os << "}";
       }
 
-      void operator()(const table& t)
+      void operator()(const table& t) const
       {
         os << "<fieldtable>: " << t.to_string();
       }
 
-      void operator()(table_entry::void_t)
+      void operator()(table_entry::void_t) const
       {
         os << "<void>";
       }
 
-      void operator()(const table_entry::bytes_t& d)
+      void operator()(const table_entry::bytes_t& d) const
       {
         os << "<bytes>: { len: " << d.size();
-        os << "0x";
-        os.hex();
+        os << std::hex;
         for (table_entry::bytes_t::const_iterator it = d.begin();
              it != d.end(); ++it)
         {
           os << static_cast<int>(*it);
         }
-        os.dec();
+        os << std::dec;
       }
   };
 }
@@ -200,7 +202,7 @@ std::string table_entry::to_string() const
   std::ostringstream os;
   os << get_key();
 
-  value_to_string(os, get_type(), get_data());
+  value_to_string(os, get_data());
 
   return os.str();
 }
@@ -210,14 +212,14 @@ void table_entry::value_to_string(std::ostream& os, const field_value_t& data)
   boost::apply_visitor(detail::data_stringifier(os), data);
 }
 
-uint32_t table_entry::serialized_size() const
+uint32_t table_entry::wireformat_size() const
 {
-  uint32_t size = sizeof(uint8_t) + static_cast<uint32_t>(m_key.length());
-  size += get_serialized_data_size(m_data);
+  uint32_t size = detail::wireformat_size_shortstring(m_key);
+  size += wireformat_data_size(m_data);
   return size;
 }
 
-uint32_t table_entry::get_serialized_data_size(const table_entry::field_value_t& data)
+uint32_t table_entry::wireformat_data_size(const table_entry::field_value_t& data)
 {
   uint32_t size = sizeof(uint8_t); // size of datatype
   size += boost::apply_visitor(detail::datatype_size_counter(), data);

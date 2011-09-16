@@ -8,12 +8,15 @@
 #include <boost/variant/variant.hpp>
 #include <boost/variant/recursive_wrapper.hpp>
 
+#include <iosfwd>
 #include <string>
 #include <utility>
 #include <vector>
 
 // This is here to stop errors from cropping up in MSVC 10
 #ifdef _MSC_VER
+# pragma warning ( push )
+# pragma warning ( disable: 4251 )
 namespace boost
 {
   struct recursive_variant_ {};
@@ -98,12 +101,10 @@ public:
   static bool validate_key_name(const std::string& key);
 
   std::string to_string() const;
+  static void value_to_string(std::ostream& os, const field_value_t& data);
 
-  static void value_to_string(std::ostream& os, field_type type, const field_value_t& data);
-
-  uint32_t serialized_size() const;
-
-  static uint32_t get_serialized_data_size(const field_value_t& data, const field_type type);
+  uint32_t wireformat_size() const;
+  static uint32_t wireformat_data_size(const field_value_t& data);
 
 private:
   std::string m_key;
@@ -112,5 +113,9 @@ private:
 
 
 } // namespace amqpp
+
+#ifdef _MSC_VER
+# pragma warning ( pop )
+#endif
 
 #endif // AMQPP_TABLE_ENTRY_H

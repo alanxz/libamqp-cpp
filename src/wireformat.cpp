@@ -1,9 +1,11 @@
 #include "wireformat.h"
-#include "exception.h"
+
 #include "byteswap.h"
+#include "exception.h"
 
 #include <boost/cstdint.hpp>
-#include <boost/variant/get.hpp>
+#include <boost/variant/apply_visitor.hpp>
+#include <boost/variant/static_visitor.hpp>
 
 #include <cassert>
 #include <sstream>
@@ -39,6 +41,7 @@ std::string wireformat::read_shortstring(std::istream& i)
 		// TODO: Throw a proper error
 		throw std::runtime_error("Failure to read short string length");
 	}
+  
 	char short_str[255];
 	if (!(i.read(short_str, len).good()))
 	{
@@ -95,14 +98,14 @@ std::string wireformat::read_longstring(std::istream& i)
 
 void wireformat::write_table(std::ostream& o, const table& t)
 {
-  std::ostringstream os;
+  write_uint32(o, t.wireformat_size());
   const amqpp::table::table_impl_t map = t.get_map();
+
   for (amqpp::table::table_impl_t::const_iterator it = map.begin();
        it != map.end(); ++it)
   {
-    write_table_entry(os, it->second);
+    write_table_entry(o, it->second);
   }
-  write_longstring(o, os.str());
   if (!o.good())
   {
     throw std::runtime_error("Write Failure");
@@ -112,82 +115,114 @@ void wireformat::write_table(std::ostream& o, const table& t)
 void wireformat::write_table_entry(std::ostream& o, const table_entry& e)
 {
   write_shortstring(o, e.get_key());
-  write_table_value(o, e.get_type(), e.get_data());
+  write_table_value(o, e.get_data());
 }
 
-void wireformat::write_table_value(std::ostream& o, table_entry::field_type t,
-                                   const table_entry::field_value_t& d)
+class table_value_writer : public boost::static_visitor<void>
 {
-  write_uint8(o, static_cast<uint8_t>(t));
-  switch (t)
+private:
+  std::ostream& os;
+public:
+  explicit table_value_writer(std::ostream& o) : os(o) {}
+
+  void operator()(int8_t v) const
   {
-  case table_entry::int8_type:
-    write_uint8(o, static_cast<uint8_t>(boost::get<int8_t>(d)));
-    break;
-  case table_entry::uint8_type:
-    write_uint8(o, boost::get<uint8_t>(d));
-    break;
-  case table_entry::int16_type:
-    write_uint16(o, static_cast<uint16_t>(boost::get<int16_t>(d)));
-    break;
-  case table_entry::uint16_type:
-    write_uint16(o, boost::get<uint16_t>(d));
-    break;
-  case table_entry::int32_type:
-    write_uint32(o, static_cast<uint32_t>(boost::get<int32_t>(d)));
-    break;
-  case table_entry::uint32_type:
-    write_uint32(o, boost::get<uint32_t>(d));
-    break;
-  case table_entry::int64_type:
-    write_uint64(o, static_cast<uint64_t>(boost::get<int64_t>(d)));
-    break;
-  case table_entry::uint64_type:
-  case table_entry::timestamp_type:
-    write_uint64(o, boost::get<uint64_t>(d));
-    break;
-  case table_entry::float_type:
-    o.write(reinterpret_cast<const char*>(&boost::get<float>(d)), sizeof(float));
-    break;
-  case table_entry::double_type:
-    o.write(reinterpret_cast<const char*>(&boost::get<double>(d)), sizeof(double));
-    break;
-  case table_entry::decimal_type:
-  {
-    table_entry::decimal_t val = boost::get<table_entry::decimal_t>(d);
-    write_uint8(o, val.first);
-    write_uint32(o, static_cast<uint32_t>(val.second));
+    wireformat::write_uint8(os, table_entry::int8_type);
+    wireformat::write_uint8(os, v);
   }
-  case table_entry::shortstring_type:
-    write_shortstring(o, boost::get<std::string>(d));
-    break;
-  case table_entry::longstring_type:
-    write_longstring(o, boost::get<std::string>(d));
-    break;
-  case table_entry::fieldarray_type:
+
+  void operator()(int16_t v) const
   {
-    table_entry::field_array_t val = boost::get<table_entry::field_array_t>(d);
-    std::ostringstream os;
-    for (table_entry::field_array_t::const_iterator it = val.begin();
-         it != val.end(); ++it)
+    wireformat::write_uint8(os, table_entry::int16_type);
+    wireformat::write_uint16(os, v);
+  }
+
+  void operator()(int32_t v) const
+  {
+    wireformat::write_uint8(os, table_entry::int32_type);
+    wireformat::write_uint32(os, v);
+  }
+
+  void operator()(int64_t v) const
+  {
+    wireformat::write_uint8(os, table_entry::int64_type);
+    wireformat::write_uint64(os, v);
+  }
+
+  void operator()(float v) const
+  {
+    wireformat::write_uint8(os, table_entry::float_type);
+    wireformat::write_uint32(os, *reinterpret_cast<uint32_t*>(&v));
+  }
+  
+  void operator()(double v) const
+  {
+    wireformat::write_uint8(os, table_entry::double_type);
+    wireformat::write_uint64(os, *reinterpret_cast<uint64_t*>(&v));
+  }
+
+  void operator()(table_entry::decimal_t v) const
+  {
+    wireformat::write_uint8(os, table_entry::decimal_type);
+    wireformat::write_uint8(os, v.first);
+    wireformat::write_uint32(os, v.second);
+  }
+
+  void operator()(const std::string& v) const
+  {
+    wireformat::write_uint8(os, table_entry::longstring_type);
+    wireformat::write_longstring(os, v);
+  }
+
+  void operator()(const table_entry::array_t& v) const
+  {
+    wireformat::write_uint8(os, table_entry::fieldarray_type);
+    table_entry::array_t::const_iterator it;
+    // Determine the wireformat size
+    uint32_t size = 0;
+    for (it = v.begin(); it != v.end(); ++it)
     {
-      write_table_value(os, it->second, it->first);
+      size += table_entry::wireformat_data_size(*it);
     }
-    write_longstring(o, os.str());
-    break;
+
+    wireformat::write_uint32(os, size);
+    for (it = v.begin(); it != v.end(); ++it)
+    {
+      wireformat::write_table_value(os, *it);
+    }
   }
-  case table_entry::fieldtable_type:
+
+  void operator()(const table_entry::timestamp_t& v)
   {
-    std::ostringstream os;
-    write_table(os, boost::get<table>(d));
-    write_longstring(o, os.str());
-    break;
+    wireformat::write_uint8(os, table_entry::timestamp_type);
+    wireformat::write_uint64(os, v);
   }
-  case table_entry::void_type:
-    break;
-  default:
-    throw std::runtime_error("Invalid table entry type");
+
+  void operator()(const table& v) const
+  {
+    wireformat::write_uint8(os, table_entry::fieldtable_type);
+    wireformat::write_table(os, v);
   }
+
+  void operator()(const table_entry::void_t) const
+  {
+    wireformat::write_uint8(os, table_entry::void_type);
+  }
+
+  void operator()(const table_entry::bytes_t& v) const
+  {
+    wireformat::write_uint8(os, table_entry::bytes_type);
+    os.write(reinterpret_cast<const char*>(&v[0]), v.size());
+    if (!os.good())
+    {
+      throw std::runtime_error("Write failed.");
+    }
+  }
+};
+
+void wireformat::write_table_value(std::ostream& o, const table_entry::field_value_t& d)
+{
+  boost::apply_visitor(table_value_writer(o), d);
 }
 
 amqpp::table wireformat::read_table(std::istream& i)
@@ -204,11 +239,11 @@ amqpp::table wireformat::read_table(std::istream& i)
 amqpp::table_entry wireformat::read_table_entry(std::istream& i)
 {
   std::string field_name = read_shortstring(i);
-  std::pair<table_entry::field_value_t, table_entry::field_type> field_value = read_field_value(i);
-  return amqpp::table_entry(field_name, field_value.first, field_value.second);
+  table_entry::field_value_t field_value = read_field_value(i);
+  return amqpp::table_entry(field_name, field_value);
 }
 
-std::pair<table_entry::field_value_t, table_entry::field_type> wireformat::read_field_value(std::istream& i)
+table_entry::field_value_t wireformat::read_field_value(std::istream& i)
 {
   uint8_t field_type = read_uint8(i);
 
@@ -217,102 +252,87 @@ std::pair<table_entry::field_value_t, table_entry::field_type> wireformat::read_
   case table_entry::boolean_type:
   {
     bool val (0 == read_uint8(i) ? false : true);
-    return std::make_pair(table_entry::field_value_t(val), table_entry::boolean_type);
+    return table_entry::field_value_t(val);
   }
   case table_entry::int8_type:
   {
     int8_t val = static_cast<int8_t>(read_uint8(i));
-    return std::make_pair(table_entry::field_value_t(val), table_entry::int8_type);
-  }
-  case table_entry::uint8_type:
-  {
-    uint8_t val = read_uint8(i);
-    return std::make_pair(table_entry::field_value_t(val), table_entry::uint8_type);
+    return table_entry::field_value_t(val);
   }
   case table_entry::int16_type:
   {
     int16_t val = static_cast<int16_t>(read_uint16(i));
-    return std::make_pair(table_entry::field_value_t(val), table_entry::int16_type);
-  }
-  case table_entry::uint16_type:
-  {
-    uint16_t val = read_uint16(i);
-    return std::make_pair(table_entry::field_value_t(val), table_entry::uint16_type);
+    return table_entry::field_value_t(val);
   }
   case table_entry::int32_type:
   {
     int32_t val = static_cast<int32_t>(read_uint32(i));
-    return std::make_pair(table_entry::field_value_t(val), table_entry::int32_type);
-  }
-  case table_entry::uint32_type:
-  {
-    int32_t val = read_uint32(i);
-    return std::make_pair(table_entry::field_value_t(val), table_entry::uint32_type);
+    return table_entry::field_value_t(val);
   }
   case table_entry::int64_type:
   {
     int64_t val = static_cast<int64_t>(read_uint64(i));
-    return std::make_pair(table_entry::field_value_t(val), table_entry::int64_type);
-  }
-  case table_entry::uint64_type:
-  {
-    uint64_t val = read_uint64(i);
-    return std::make_pair(table_entry::field_value_t(val), table_entry::int64_type);
+    return table_entry::field_value_t(val);
   }
   case table_entry::float_type:
   {
-    float val = 0.f;
-    i.read(reinterpret_cast<char*>(&val), sizeof(val));
-    return std::make_pair(table_entry::field_value_t(val), table_entry::float_type);
+    uint32_t preconvert = read_uint32(i);
+    float val = *reinterpret_cast<float*>(&preconvert);
+    return table_entry::field_value_t(val);
   }
   case table_entry::double_type:
   {
-    double val = 0.;
-    i.read(reinterpret_cast<char*>(&val), sizeof(val));
-    return std::make_pair(table_entry::field_value_t(val), table_entry::double_type);
+    uint64_t preconvert = read_uint64(i);
+    double val = *reinterpret_cast<float*>(&preconvert);
+    return table_entry::field_value_t(val);
   }
   case table_entry::decimal_type:
   {
     uint8_t mag = read_uint8(i);
     int32_t val = static_cast<int32_t>(read_uint32(i));
-    return std::make_pair(table_entry::field_value_t(table_entry::decimal_t(mag, val)), table_entry::decimal_type);
-  }
-  case table_entry::shortstring_type:
-  {
-    std::string val = read_shortstring(i);
-    return std::make_pair(table_entry::field_value_t(val), table_entry::shortstring_type);
+    return table_entry::field_value_t(table_entry::decimal_t(mag, val));
   }
   case table_entry::longstring_type:
   {
     std::string val = read_longstring(i);
-    return std::make_pair(table_entry::field_value_t(val), table_entry::longstring_type);
+    return table_entry::field_value_t(val);
   }
   case table_entry::fieldarray_type:
   {
     std::string fieldarray = read_longstring(i);
-    table_entry::field_array_t val;
+    table_entry::array_t val;
     std::istringstream is(fieldarray);
     while (!is.eof())
     {
       val.push_back(read_field_value(is));
     }
-    return std::make_pair(table_entry::field_value_t(val), table_entry::fieldarray_type);
+    return table_entry::field_value_t(val);
   }
   case table_entry::timestamp_type:
   {
     uint64_t val = read_uint64(i);
-    return std::make_pair(table_entry::field_value_t(val), table_entry::timestamp_type);
+    return table_entry::field_value_t(val);
   }
   case table_entry::fieldtable_type:
   {
     table val = read_table(i);
-    return std::make_pair(table_entry::field_value_t(val), table_entry::fieldtable_type);
+    return table_entry::field_value_t(val);
   }
   case table_entry::void_type:
   {
-    return std::make_pair(table_entry::field_value_t(table_entry::void_t()), table_entry::void_type);
+    return table_entry::field_value_t(table_entry::void_t());
   }
-    break;
+  case table_entry::bytes_type:
+  {
+    uint32_t size = read_uint32(i);
+    table_entry::bytes_t val(size);
+    i.read(reinterpret_cast<char*>(&val[0]), size);
+    if (!i.good())
+    {
+      throw std::runtime_error("Read failed.");
+    }
+    return table_entry::field_value_t(val);
+  }
   default:
     throw std::runtime_error("Invalid field table type");
   }

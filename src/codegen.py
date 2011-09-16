@@ -338,7 +338,7 @@ def genBody(spec):
             elif domain == 'longstr':
                 print "  size += sizeof(uint32_t) + static_cast<uint32_t>(m_%s.length());" % (sanitizeName(field.name))
             elif domain == 'table':
-                print "  size += m_%s.serialized_size();" % (sanitizeName(field.name))
+                print "  size += m_%s.wireformat_size();" % (sanitizeName(field.name))
             else:
                 print "  size += %s; // %s" % (size_map[domain], field.name)
         print "  return size;"
