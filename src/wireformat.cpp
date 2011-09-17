@@ -192,7 +192,7 @@ public:
     }
   }
 
-  void operator()(const table_entry::timestamp_t& v)
+  void operator()(const table_entry::timestamp_t v) const
   {
     wireformat::write_uint8(os, table_entry::timestamp_type);
     wireformat::write_uint64(os, v);

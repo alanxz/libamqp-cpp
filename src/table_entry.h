@@ -89,7 +89,22 @@ public:
   typedef std::vector<field_value_t> array_t;
 
 
-  explicit table_entry(const std::string& key, const field_value_t& data);
+  explicit table_entry(const std::string& key, bool value);
+  table_entry(const std::string& key, int8_t value);
+  table_entry(const std::string& key, int16_t value);
+  table_entry(const std::string& key, int32_t value);
+  table_entry(const std::string& key, int64_t value);
+  table_entry(const std::string& key, float value);
+  table_entry(const std::string& key, double value);
+  table_entry(const std::string& key, decimal_t value);
+  table_entry(const std::string& key, const std::string& value);
+  table_entry(const std::string& key, const array_t& value);
+  table_entry(const std::string& key, timestamp_t value);
+  table_entry(const std::string& key, const table& value);
+  table_entry(const std::string& key, void_t value);
+  table_entry(const std::string& key, bytes_t value);
+
+  table_entry(const std::string& key, const field_value_t& data);
   virtual ~table_entry();
 
   inline bool operator<(const table_entry& r) const { return m_key < r.m_key; }

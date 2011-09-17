@@ -170,6 +170,120 @@ namespace detail
   };
 }
 
+table_entry::table_entry(const std::string& key, bool value) :
+  m_key(key), m_data(field_value_t(value))
+{
+  if (!validate_key_name(m_key))
+  {
+    throw std:: runtime_error("Table entry key name is not valid.");
+  }
+}
+
+table_entry::table_entry(const std::string& key, int8_t value) :
+  m_key(key), m_data(field_value_t(value))
+{
+  if (!validate_key_name(m_key))
+  {
+    throw std::runtime_error("Table entry key name is not valid.");
+  }
+}
+table_entry::table_entry(const std::string& key, int16_t value):
+  m_key(key), m_data(field_value_t(value))
+{
+  if (!validate_key_name(m_key))
+  {
+    throw std:: runtime_error("Table entry key name is not valid.");
+  }
+}
+table_entry::table_entry(const std::string& key, int32_t value):
+  m_key(key), m_data(field_value_t(value))
+{
+  if (!validate_key_name(m_key))
+  {
+    throw std:: runtime_error("Table entry key name is not valid.");
+  }
+}
+table_entry::table_entry(const std::string& key, int64_t value):
+  m_key(key), m_data(field_value_t(value))
+{
+  if (!validate_key_name(m_key))
+  {
+    throw std:: runtime_error("Table entry key name is not valid.");
+  }
+}
+table_entry::table_entry(const std::string& key, float value):
+  m_key(key), m_data(field_value_t(value))
+{
+  if (!validate_key_name(m_key))
+  {
+    throw std:: runtime_error("Table entry key name is not valid.");
+  }
+}
+table_entry::table_entry(const std::string& key, double value):
+  m_key(key), m_data(field_value_t(value))
+{
+  if (!validate_key_name(m_key))
+  {
+    throw std:: runtime_error("Table entry key name is not valid.");
+  }
+}
+table_entry::table_entry(const std::string& key, decimal_t value):
+  m_key(key), m_data(field_value_t(value))
+{
+  if (!validate_key_name(m_key))
+  {
+    throw std:: runtime_error("Table entry key name is not valid.");
+  }
+}
+table_entry::table_entry(const std::string& key, const std::string& value):
+  m_key(key), m_data(field_value_t(value))
+{
+  if (!validate_key_name(m_key))
+  {
+    throw std:: runtime_error("Table entry key name is not valid.");
+  }
+}
+table_entry::table_entry(const std::string& key, const array_t& value):
+  m_key(key), m_data(field_value_t(value))
+{
+  if (!validate_key_name(m_key))
+  {
+    throw std:: runtime_error("Table entry key name is not valid.");
+  }
+}
+table_entry::table_entry(const std::string& key, timestamp_t value):
+  m_key(key), m_data(field_value_t(value))
+{
+  if (!validate_key_name(m_key))
+  {
+    throw std:: runtime_error("Table entry key name is not valid.");
+  }
+}
+table_entry::table_entry(const std::string& key, const table& value):
+  m_key(key), m_data(field_value_t(value))
+{
+  if (!validate_key_name(m_key))
+  {
+    throw std:: runtime_error("Table entry key name is not valid.");
+  }
+}
+table_entry::table_entry(const std::string& key, void_t value):
+  m_key(key), m_data(field_value_t(value))
+{
+  if (!validate_key_name(m_key))
+  {
+    throw std:: runtime_error("Table entry key name is not valid.");
+  }
+}
+table_entry::table_entry(const std::string& key, bytes_t value):
+  m_key(key), m_data(field_value_t(value))
+{
+  if (!validate_key_name(m_key))
+  {
+    throw std:: runtime_error("Table entry key name is not valid.");
+  }
+}
+
 table_entry::table_entry(const std::string& key, const field_value_t& data) :
   m_key(key), m_data(data)
 {
