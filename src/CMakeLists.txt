@@ -34,6 +34,9 @@ set(LIBAMQP_CPP_SRCS
 
 	byteswap.h
 
+    channel.h
+    channel.cpp
+
     connection.h
     connection.cpp
 
