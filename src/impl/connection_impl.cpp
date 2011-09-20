@@ -1,19 +1,24 @@
 #include "connection_impl.h"
 
 #include "amqp_sasl.h"
+#include "frame_builder.h"
 #include "frame.h"
 #include "methods.gen.h"
 #include "table.h"
 #include "table_entry.h"
 
 #include <boost/array.hpp>
-#include <boost/asio/streambuf.hpp>
 #include <boost/asio/buffer.hpp>
 #include <boost/asio/ip/tcp.hpp>
+#include <boost/asio/read.hpp>
+#include <boost/asio/streambuf.hpp>
+#include <boost/asio/write.hpp>
+
 #include <boost/iostreams/device/array.hpp>
 #include <boost/iostreams/stream_buffer.hpp>
 #include <boost/lexical_cast.hpp>
 #include <boost/shared_ptr.hpp>
+#include <boost/system/system_error.hpp>
 
 #include <algorithm>
 #include <istream>
@@ -26,8 +31,10 @@ namespace amqpp
 namespace impl
 {
 
-connection_impl::connection_impl(const std::string& host, uint16_t port, const std::string& username, const std::string& password, const std::string& vhost)
+connection_impl::connection_impl(const std::string& host, uint16_t port, const std::string& username, const std::string& password, const std::string& vhost):
+  m_ioservice(), m_socket(m_ioservice)
 {
+  connect(host, port, username, password, vhost);
 }
 
 connection_impl::~connection_impl()
@@ -43,36 +50,44 @@ void connection_impl::close()
 {
 }
 
-void connection_impl::connect()
+void connection_impl::connect(const std::string& host, uint16_t port, const std::string& username, const std::string& password, const std::string& vhost)
 {
   tcp::resolver resolver(m_ioservice);
-  tcp::resolver::query query("localhost", boost::lexical_cast<std::string>(5672));
+  tcp::resolver::query query(host, boost::lexical_cast<std::string>(port));
 
-  tcp::iostream io(query);
-  io.exceptions(std::ios::failbit | std::ios::badbit | std::ios::eofbit);
+  for (tcp::resolver::iterator it = resolver.resolve(query);
+    it != tcp::resolver::iterator(); ++it)
+  {
+    try
+    {
+      m_socket.connect(*it);
+      break;
+    }
+    catch (boost::system::system_error&)
+    {
+    }
+  }
+  if (!m_socket.is_open())
+  {
+    // Failed above connecting
+    throw std::runtime_error("Failed to connect to remote peer");
+  }
 
+  // Send handshake
   static const boost::array<char, 8> handshake = { { 'A', 'M', 'Q', 'P', 0, 0, 9, 1 } };
-  io.write(handshake.data(), handshake.size());
-  io.flush();
+  boost::asio::write(m_socket, boost::asio::buffer(handshake));
 
-  char resp = io.peek();
+  detail::method::ptr_t method = detail::method::read(read_frame());
+  methods::connection::start::ptr_t start = detail::method_cast<methods::connection::start>(method);
 
-  if (resp != detail::frame::METHOD_TYPE)
+  if (0 != start->get_version_major() ||
+      9 != start->get_version_minor())
   {
-      // connection failure
+    m_socket.close();
+    throw std::runtime_error("Broker is using the wrong version of AMQP");
   }
 
-  detail::frame::ptr_t fr = detail::frame::read_frame(io);
-  detail::method::ptr_t method = detail::method::read(fr);
-  methods::connection::start::ptr_t start_method = detail::method_cast<methods::connection::start>(method);
-
-  if (0 != start_method->get_version_major() ||
-      9 != start_method->get_version_minor())
-  {
-    // fail
-  }
-
-  std::cout << start_method->to_string();
+  std::cout << start->to_string();
   std::cout << std::endl;
 
   methods::connection::start_ok::ptr_t start_ok = methods::connection::start_ok::create();
@@ -82,20 +97,17 @@ void connection_impl::connect()
   start_ok->get_client_properties().insert(table_entry("copyright", "Alan Antonuk (c) 2011"));
   start_ok->get_client_properties().insert(table_entry("information", "http://github.com/alanxz/libamqp-cpp"));
 
-  std::string mechanism = sasl::select_sasl_mechanism(start_method->get_mechanisms());
+  std::string mechanism = sasl::select_sasl_mechanism(start->get_mechanisms());
   start_ok->set_mechanism(mechanism);
-  start_ok->set_response(sasl::get_sasl_response(mechanism, m_username, m_password));
+  start_ok->set_response(sasl::get_sasl_response(mechanism, username, password));
   start_ok->set_locale("en_US");
 
   std::cout << start_ok->to_string() << std::endl;
-  fr = detail::frame::create_from_method(0, start_ok);
+  detail::frame::ptr_t fr = detail::frame::create_from_method(0, start_ok);
 
-  fr->write(io);
+  write_frame(fr);
 
-  fr = detail::frame::read_frame(io);
-  method = detail::method::read(fr);
-  std::cout << method->to_string() << std::endl;
-
+  method = detail::method::read(read_frame());
   methods::connection::tune::ptr_t tune = detail::method_cast<methods::connection::tune>(method);
 
   methods::connection::tune_ok::ptr_t tune_ok = methods::connection::tune_ok::create();
@@ -103,29 +115,46 @@ void connection_impl::connect()
   tune_ok->set_frame_max(tune->get_frame_max());
   tune_ok->set_heartbeat(tune->get_heartbeat());
 
-  std::cout << tune_ok->to_string() << std::endl;
   fr = detail::frame::create_from_method(0, tune_ok);
-  fr->write(io);
-
+  write_frame(fr);
 
   methods::connection::open::ptr_t open = methods::connection::open::create();
-  open->set_virtual_host("/");
+  open->set_virtual_host(vhost);
   open->set_capabilities("");
   open->set_insist(false);
   fr = detail::frame::create_from_method(0, open);
-  fr->write(io);
+  write_frame(fr);
 
-  fr = detail::frame::read_frame(io);
-  method = detail::method::read(fr);
+  method = detail::method::read(read_frame());
   std::cout << method->to_string() << std::endl;
+  //fr = detail::frame::read_frame(io);
+  //method = detail::method::read(fr);
+  //std::cout << method->to_string() << std::endl;
 
-  methods::connection::close::ptr_t close = methods::connection::close::create();
-  fr = detail::frame::create_from_method(0, close);
-  fr->write(io);
-  fr = detail::frame::read_frame(io);
-  method = detail::method::read(fr);
-  std::cout << method->to_string() << std::endl;
+  //methods::connection::close::ptr_t close = methods::connection::close::create();
+  //fr = detail::frame::create_from_method(0, close);
+  //fr->write(io);
+  //fr = detail::frame::read_frame(io);
+  //method = detail::method::read(fr);
+  //std::cout << method->to_string() << std::endl;
 
+}
+
+detail::frame::ptr_t connection_impl::read_frame()
+{
+  m_framebuilder.reset();
+  boost::asio::read(m_socket, m_framebuilder.get_header_buffer());
+  if (m_framebuilder.is_body_read_required())
+  {
+    boost::asio::read(m_socket, m_framebuilder.get_body_buffer());
+  }
+
+  return m_framebuilder.create_frame();
+}
+
+void connection_impl::write_frame(const detail::frame::ptr_t& frame)
+{
+  boost::asio::write(m_socket, m_framewriter.get_sequence(frame));
 }
 } // namespace impl
 } // namespace amqpp

@@ -44,6 +44,12 @@ set(LIBAMQP_CPP_SRCS
 
     export.h
 
+	frame_builder.h
+	frame_builder.cpp
+
+	frame_writer.h
+	frame_writer.cpp
+
     frame.h
     frame.cpp
 

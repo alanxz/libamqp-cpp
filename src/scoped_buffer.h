@@ -30,8 +30,6 @@ public:
   uint32_t get_size() const { return m_size; }
   T* get_data() const { return m_data.get(); }
 
-  boost::asio::mutable_buffer get_buffer() const { return boost::asio::buffer(m_data.get(), m_size); }
-
 private:
   boost::scoped_array<T> m_data;
   const uint32_t m_size;

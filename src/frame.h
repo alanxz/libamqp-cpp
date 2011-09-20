@@ -5,6 +5,8 @@
 #include "scoped_buffer.h"
 #include "methods.h"
 #include "methods.gen.h"
+
+#include <boost/array.hpp>
 #include <boost/asio/buffer.hpp>
 #include <boost/cstdint.hpp>
 #include <boost/noncopyable.hpp>
@@ -26,6 +28,10 @@ namespace detail
 class AMQPP_EXPORT frame : boost::noncopyable, public boost::enable_shared_from_this<frame>
 {
 public:
+  typedef boost::array<boost::asio::const_buffer, 3> buffer_sequence_t;
+
+  static const boost::array<char, 1> END_BUFFER;
+
   static const uint8_t FRAME_END;
   enum frame_type 
   {
@@ -40,34 +46,20 @@ public:
 
   static frame_type get_frame_type(const uint8_t val);
 
-  static ptr_t read_frame(std::istream& i);
   static ptr_t create_from_method(uint16_t channel, const detail::method::ptr_t method);
 
-  void write(std::ostream& o) const;
-
-  frame(frame_type type, uint16_t channel, const boost::asio::mutable_buffer& payload);
+  frame(frame_type type, uint16_t channel, const shared_buffer_t& buffer);
   frame(frame_type type, uint16_t channel, uint32_t payload_size);
-  frame(frame_type type, uint16_t channel, boost::shared_ptr<scoped_buffer<char> >& shared_payload);
   virtual ~frame();
 
   inline frame_type get_type() const { return m_type; }
-  inline void set_type(frame_type val) { m_type = val; }
-
   inline uint16_t get_channel() const { return m_channel; }
-  inline void set_channel(uint16_t val) { m_channel = val; }
-
-  inline uint32_t get_payload_size() const { return static_cast<uint32_t>(boost::asio::buffer_size(m_buffer)); }
-  inline boost::asio::mutable_buffer get_payload_data() const { return m_buffer; }
-
-  inline bool have_shared_buffer() const { return shared_buffer_t() == m_shared_buffer; }
   inline shared_buffer_t get_shared_buffer() const { return m_shared_buffer; }
 
 private:
-  frame_type m_type;
-  uint16_t m_channel;
   shared_buffer_t m_shared_buffer;
-  boost::asio::mutable_buffer m_buffer;
-
+  uint16_t m_channel;
+  frame_type m_type;
 };
 
 } // namespace detail

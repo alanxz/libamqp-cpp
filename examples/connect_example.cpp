@@ -2,6 +2,5 @@
 
 int main()
 {
-  amqpp::connection c;
-  c.connect();
+  boost::shared_ptr<amqpp::connection> c = amqpp::connection::create_connection("localhost", "guest", "guest", "/");
 }

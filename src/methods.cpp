@@ -13,7 +13,7 @@ method::ptr_t method::read(const frame::ptr_t f)
 {
   typedef boost::iostreams::stream<boost::iostreams::array_source> array_istream;
 
-  array_istream is(boost::asio::buffer_cast<char*>(f->get_payload_data()), f->get_payload_size());
+  array_istream is(f->get_shared_buffer()->get_data(), f->get_shared_buffer()->get_size());
 
   return read(is);
 }
