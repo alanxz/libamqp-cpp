@@ -18,7 +18,7 @@ template<class T>
 class scoped_buffer : boost::noncopyable
 {
 public:
-  explicit scoped_buffer(uint32_t size) :
+  explicit scoped_buffer(size_t size) :
     m_data(new T[size]), m_size(size)
   {
   }
@@ -27,12 +27,12 @@ public:
   {
   }
 
-  uint32_t get_size() const { return m_size; }
+  size_t get_size() const { return m_size; }
   T* get_data() const { return m_data.get(); }
 
 private:
   boost::scoped_array<T> m_data;
-  const uint32_t m_size;
+  const size_t m_size;
 };
 
 } // namespace detail

@@ -89,7 +89,7 @@ public:
   typedef std::vector<field_value_t> array_t;
 
 
-  explicit table_entry(const std::string& key, bool value);
+  table_entry(const std::string& key, bool value);
   table_entry(const std::string& key, int8_t value);
   table_entry(const std::string& key, int16_t value);
   table_entry(const std::string& key, int32_t value);
@@ -97,6 +97,7 @@ public:
   table_entry(const std::string& key, float value);
   table_entry(const std::string& key, double value);
   table_entry(const std::string& key, decimal_t value);
+  table_entry(const std::string& key, const char* value);
   table_entry(const std::string& key, const std::string& value);
   table_entry(const std::string& key, const array_t& value);
   table_entry(const std::string& key, timestamp_t value);

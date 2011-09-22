@@ -44,9 +44,7 @@ private:
   void validate_body();
 
   builder_state m_state;
-  boost::array<char, 8> m_header;
-
-  bool m_valid_header;
+  boost::array<uint8_t, 8> m_header;
 
   frame::frame_type m_type;
   uint16_t m_channel;

@@ -16,7 +16,6 @@ typedef boost::iostreams::stream<boost::iostreams::array_source> array_istream;
 frame_builder::frame_builder()
 {
   reset();
-
 }
 
 frame_builder::~frame_builder()
@@ -41,7 +40,7 @@ bool frame_builder::is_body_read_required()
 {
   validate_header();
 
-  if (m_body == boost::shared_ptr<scoped_buffer<char> >())
+  if (m_body->get_size() == 0)
   {
     return false;
   }
@@ -68,7 +67,7 @@ void frame_builder::validate_header()
 {
   if (m_state == invalid)
   {
-    array_istream is(m_header.data(), m_header.size());
+    array_istream is(reinterpret_cast<char*>(m_header.data()), m_header.size());
     m_type = frame::get_frame_type(wireformat::read_uint8(is));
     m_channel = wireformat::read_uint16(is);
     uint32_t size = wireformat::read_uint32(is);
@@ -81,14 +80,14 @@ void frame_builder::validate_header()
         throw std::runtime_error("Framing error: bad end octet");
       }
       m_state = valid_both;
+      m_body = boost::make_shared<scoped_buffer<char> >(0);
     }
     else
     {
       m_state = valid_header;
+      m_body = boost::make_shared<scoped_buffer<char> >(size);
+      m_body->get_data()[0] = last;
     }
-
-    m_body = boost::make_shared<scoped_buffer<char> >(size);
-    m_body->get_data()[0] = last;
   }
 }
 
@@ -100,7 +99,7 @@ void frame_builder::validate_body()
     throw std::logic_error("validate_body called before a valid header existed");
   case valid_header:
   {
-    if (m_end[0] != 0xCE)
+    if (m_end[0] != frame::FRAME_END)
     {
       throw std::runtime_error("Framing error: bad end octet");
     }

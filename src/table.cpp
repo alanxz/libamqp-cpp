@@ -18,7 +18,7 @@ void table::insert(const table_entry& data)
 std::string table::to_string() const
 {
   std::ostringstream os;
-  os << "{ len: " << m_table.size();
+  os << "{ elements: " << m_table.size();
   for (table_impl_t::const_iterator it = m_table.begin();
         it != m_table.end(); ++it)
   {

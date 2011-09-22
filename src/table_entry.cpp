@@ -235,6 +235,14 @@ table_entry::table_entry(const std::string& key, decimal_t value):
     throw std:: runtime_error("Table entry key name is not valid.");
   }
 }
+table_entry::table_entry(const std::string& key, const char* value):
+  m_key(key), m_data(field_value_t(std::string(value)))
+{
+  if (!validate_key_name(m_key))
+  {
+    throw std:: runtime_error("Table entry key name is not valid.");
+  }
+}
 table_entry::table_entry(const std::string& key, const std::string& value):
   m_key(key), m_data(field_value_t(value))
 {

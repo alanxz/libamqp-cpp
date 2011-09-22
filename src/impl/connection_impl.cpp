@@ -9,6 +9,7 @@
 
 #include <boost/array.hpp>
 #include <boost/asio/buffer.hpp>
+#include <boost/asio/buffers_iterator.hpp>
 #include <boost/asio/ip/tcp.hpp>
 #include <boost/asio/read.hpp>
 #include <boost/asio/streambuf.hpp>
@@ -91,11 +92,11 @@ void connection_impl::connect(const std::string& host, uint16_t port, const std:
   std::cout << std::endl;
 
   methods::connection::start_ok::ptr_t start_ok = methods::connection::start_ok::create();
-  start_ok->get_client_properties().insert(table_entry("product", "libamqp-cpp"));
-  start_ok->get_client_properties().insert(table_entry("version", "0.1b"));
-  start_ok->get_client_properties().insert(table_entry("platform", "c++"));
-  start_ok->get_client_properties().insert(table_entry("copyright", "Alan Antonuk (c) 2011"));
-  start_ok->get_client_properties().insert(table_entry("information", "http://github.com/alanxz/libamqp-cpp"));
+  start_ok->get_client_properties().insert(table_entry("product", std::string("libamqp-cpp")));
+  start_ok->get_client_properties().insert(table_entry("version", std::string("0.1b")));
+  start_ok->get_client_properties().insert(table_entry("platform", std::string("c++")));
+  start_ok->get_client_properties().insert(table_entry("copyright", std::string("Alan Antonuk (c) 2011")));
+  start_ok->get_client_properties().insert(table_entry("information", std::string("http://github.com/alanxz/libamqp-cpp")));
 
   std::string mechanism = sasl::select_sasl_mechanism(start->get_mechanisms());
   start_ok->set_mechanism(mechanism);
@@ -126,18 +127,16 @@ void connection_impl::connect(const std::string& host, uint16_t port, const std:
   write_frame(fr);
 
   method = detail::method::read(read_frame());
+  methods::connection::open_ok::ptr_t open_ok = detail::method_cast<methods::connection::open_ok>(method);
   std::cout << method->to_string() << std::endl;
-  //fr = detail::frame::read_frame(io);
-  //method = detail::method::read(fr);
-  //std::cout << method->to_string() << std::endl;
 
-  //methods::connection::close::ptr_t close = methods::connection::close::create();
-  //fr = detail::frame::create_from_method(0, close);
-  //fr->write(io);
-  //fr = detail::frame::read_frame(io);
-  //method = detail::method::read(fr);
-  //std::cout << method->to_string() << std::endl;
+  methods::connection::close::ptr_t close = methods::connection::close::create();
+  fr = detail::frame::create_from_method(0, close);
+  write_frame(fr);
 
+  method = detail::method::read(read_frame());
+  methods::connection::close_ok::ptr_t close_ok = detail::method_cast<methods::connection::close_ok>(method);
+  std::cout << method->to_string() << std::endl;
 }
 
 detail::frame::ptr_t connection_impl::read_frame()

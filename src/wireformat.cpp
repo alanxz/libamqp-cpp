@@ -98,7 +98,7 @@ std::string wireformat::read_longstring(std::istream& i)
 
 void wireformat::write_table(std::ostream& o, const table& t)
 {
-  write_uint32(o, t.wireformat_size());
+  write_uint32(o, t.wireformat_size() - sizeof(uint32_t));
   const amqpp::table::table_impl_t map = t.get_map();
 
   for (amqpp::table::table_impl_t::const_iterator it = map.begin();
@@ -124,6 +124,12 @@ private:
   std::ostream& os;
 public:
   explicit table_value_writer(std::ostream& o) : os(o) {}
+
+  void operator()(bool v) const
+  {
+    wireformat::write_uint8(os, table_entry::boolean_type);
+    wireformat::write_uint8(os, v);
+  }
 
   void operator()(int8_t v) const
   {
