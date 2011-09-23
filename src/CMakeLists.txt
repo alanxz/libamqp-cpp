@@ -52,6 +52,8 @@ set(LIBAMQP_CPP_SRCS
 
     frame.h
     frame.cpp
+  impl/channel_impl.h
+  impl/channel_impl.cpp
 
 	impl/connection_impl.h
 	impl/connection_impl.cpp
