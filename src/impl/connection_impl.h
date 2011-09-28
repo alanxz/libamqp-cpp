@@ -12,9 +12,10 @@
 #include <boost/asio/io_service.hpp>
 #include <boost/asio/ip/tcp.hpp>
 #include <boost/cstdint.hpp>
+#include <boost/enable_shared_from_this.hpp>
 #include <boost/noncopyable.hpp>
 #include <boost/shared_ptr.hpp>
-#include <boost/enable_shared_from_this.hpp>
+#include <boost/thread/future.hpp>
 
 #include <string>
 #include <vector>
@@ -30,7 +31,7 @@ namespace impl
 
 class channel_impl;
 
-class connection_impl : public amqpp::connection, boost::noncopyable, boost::enable_shared_from_this
+class connection_impl : public amqpp::connection, public boost::noncopyable, public boost::enable_shared_from_this<connection_impl>
 {
 public:
   explicit connection_impl(const std::string& host, uint16_t port, const std::string& username, const std::string& password, const std::string& vhost);
@@ -43,11 +44,14 @@ public:
   // Internal interface
   virtual void connect(const std::string& host, uint16_t port, const std::string& username, const std::string& password, const std::string& vhost);
 
-  void on_frame_header_read(const boost::system::error_code& ec, size_t bytes_transferred);
-  void on_frame_body_read(const boost::system::error_code& ec, size_t bytes_transferred);
 
   void process_frame(detail::frame::ptr_t& frame);
   void begin_async_frame_read();
+
+  typedef boost::unique_future<boost::shared_ptr<channel> > channel_future_t;
+  channel_future_t begin_open_channel();
+
+  uint16_t get_next_channel_id();
 
 private:
   boost::shared_ptr<detail::frame> read_frame();
@@ -56,10 +60,6 @@ private:
   boost::asio::io_service m_ioservice;
   boost::asio::ip::tcp::socket m_socket;
 
-  detail::frame_builder m_framebuilder;
-  detail::frame_writer m_framewriter;
-
-  std::vector<boost::shared_ptr<channel_impl> > m_channelmap;
 };
 
 } // namespace impl

@@ -59,17 +59,28 @@ uint16_t connection_impl::get_next_channel_id()
 
 boost::shared_ptr<channel> connection_impl::open_channel()
 {
+  channel_future_t future = begin_open_channel();
+  return future.get();
+}
+
+connection_impl::channel_future_t > connection_impl::begin_open_channel()
+{
+  boost::promise<boost::shared_ptr<channel> > promise;
+
   uint16_t channel_id = get_next_channel_id();
 
-  methods::channel::open::ptr_t open = methods::channel::open::create();
-  detail::frame::ptr_t fr = detail::frame::create_from_method(channel_id, open);
+  m_ioservice.post(boost::bind(&connection_impl::open_channel_impl, this, promise));
 
-  channel_impl::ptr_t channel = m_channelmap[channel_id];
-  channel->rpc_reply = channel->rpc_promise.get_future();
+  return promise.get_future();
+}
 
-  begin_async_write_frame(fr);
-  fr = channel->rpc_reply->get();
-  return channel;
+void connection_impl::open_channel_impl(boost::promise<boost::shared_ptr<channel> > promise)
+{
+  uint16_t channel_id = get_next_channel_id();
+
+  methods::channel::open::ptr_T open = methods::channel::open::create();
+  detail::frame::ptr_t frame = detail::frame::create_from_method(channel_id, open);
+
 }
 
 void connection_impl::begin_async_write_frame(detail::frame::ptr_t& fr)
