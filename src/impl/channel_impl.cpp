@@ -5,8 +5,9 @@
 namespace amqpp {
 namespace impl {
 
-channel_impl::channel_impl(uint16_t channel_id, boost::shared_ptr<connection_impl>& connection) :
-  m_connection(connection), m_channel_id(channel_id)
+channel_impl::channel_impl(uint16_t& channel_id, boost::shared_ptr<connection_impl>& connection,
+                           boost::shared_ptr<boost::promise<channel_impl::ptr_t> >& promise) :
+  m_connection(connection), m_channel_id(channel_id), m_open_promise(promise)
 {
 }
 

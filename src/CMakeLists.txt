@@ -58,9 +58,6 @@ set(LIBAMQP_CPP_SRCS
 	impl/connection_impl.h
 	impl/connection_impl.cpp
 
-  impl/connection_thread.h
-  impl/connection_thread.cpp
-
     methods.h
     methods.cpp
 

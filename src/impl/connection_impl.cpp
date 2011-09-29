@@ -37,8 +37,8 @@ namespace amqpp
 namespace impl
 {
 
-connection_impl::connection_impl(const std::string& host, uint16_t port, const std::string& username, const std::string& password, const std::string& vhost):
-  m_ioservice(), m_socket(m_ioservice)
+connection_impl::connection_impl(const std::string& host, uint16_t port, const std::string& username, const std::string& password, const std::string& vhost) :
+  m_thread(*this)
 {
   connect(host, port, username, password, vhost);
 }
@@ -47,51 +47,8 @@ connection_impl::~connection_impl()
 {
 }
 
-uint16_t connection_impl::get_next_channel_id()
-{
-  size_t next_id = m_channelmap.size();
-  if (next_id > std::numeric_limits<uint16_t>::max())
-  {
-    throw std::runtime_error("Out of channels!");
-  }
-  m_channelmap.push_back(boost::make_shared<channel_impl>(next_id, this->shared_from_this()));
-}
 
 boost::shared_ptr<channel> connection_impl::open_channel()
-{
-  channel_future_t future = begin_open_channel();
-  return future.get();
-}
-
-connection_impl::channel_future_t > connection_impl::begin_open_channel()
-{
-  boost::promise<boost::shared_ptr<channel> > promise;
-
-  uint16_t channel_id = get_next_channel_id();
-
-  m_ioservice.post(boost::bind(&connection_impl::open_channel_impl, this, promise));
-
-  return promise.get_future();
-}
-
-void connection_impl::open_channel_impl(boost::promise<boost::shared_ptr<channel> > promise)
-{
-  uint16_t channel_id = get_next_channel_id();
-
-  methods::channel::open::ptr_T open = methods::channel::open::create();
-  detail::frame::ptr_t frame = detail::frame::create_from_method(channel_id, open);
-
-}
-
-void connection_impl::begin_async_write_frame(detail::frame::ptr_t& fr)
-{
-  m_framewriter.get_sequence(fr);
-  boost::asio::async_write(m_socket, m_framewriter, boost::bind(&connection_impl::on_frame_write, this,
-                                                                boost::asio::placeholder::error,
-                                                                boost::asio::placeholder::bytes_transferred));
-}
-
-void connection_impl::on_frame_write(const boost::system::error_code& ec, size_t bytes_transferred)
 {
 }
 
@@ -101,22 +58,24 @@ void connection_impl::close()
 
 void connection_impl::connect(const std::string& host, uint16_t port, const std::string& username, const std::string& password, const std::string& vhost)
 {
-  tcp::resolver resolver(m_ioservice);
+  tcp::resolver resolver(m_thread.get_io_service());
   tcp::resolver::query query(host, boost::lexical_cast<std::string>(port));
+
+  boost::asio::ip::tcp::socket& sock = m_thread.get_socket();
 
   for (tcp::resolver::iterator it = resolver.resolve(query);
     it != tcp::resolver::iterator(); ++it)
   {
     try
     {
-      m_socket.connect(*it);
+      sock.connect(*it);
       break;
     }
     catch (boost::system::system_error&)
     {
     }
   }
-  if (!m_socket.is_open())
+  if (!sock.is_open())
   {
     // Failed above connecting
     throw std::runtime_error("Failed to connect to remote peer");
@@ -124,7 +83,7 @@ void connection_impl::connect(const std::string& host, uint16_t port, const std:
 
   // Send handshake
   static const boost::array<char, 8> handshake = { { 'A', 'M', 'Q', 'P', 0, 0, 9, 1 } };
-  boost::asio::write(m_socket, boost::asio::buffer(handshake));
+  boost::asio::write(sock, boost::asio::buffer(handshake));
 
   detail::method::ptr_t method = detail::method::read(read_frame());
   methods::connection::start::ptr_t start = detail::method_cast<methods::connection::start>(method);
@@ -132,7 +91,7 @@ void connection_impl::connect(const std::string& host, uint16_t port, const std:
   if (0 != start->get_version_major() ||
       9 != start->get_version_minor())
   {
-    m_socket.close();
+    sock.close();
     throw std::runtime_error("Broker is using the wrong version of AMQP");
   }
 
@@ -178,90 +137,174 @@ void connection_impl::connect(const std::string& host, uint16_t port, const std:
   methods::connection::open_ok::ptr_t open_ok = detail::method_cast<methods::connection::open_ok>(method);
   std::cout << method->to_string() << std::endl;
 
-  m_channelmap.push_back(boost::make_shared<channel_impl>(0, this->shared_from_this()));
-
-  begin_async_frame_read();
-  boost::thread connection_thread(boost::bind(&boost::asio::io_service::run, &m_ioservice));
-}
-
-void connection_impl::begin_async_frame_read()
-{
-  m_framebuilder.reset();
-  boost::asio::async_read(m_socket, m_framebuilder.get_header_buffer(),
-                          boost::bind(&connection_impl::on_frame_header_read, this,
-                                      boost::asio::placeholder::error,
-                                      boost::asio::placeholder::bytes_transferred));
-}
-
-void connection_impl::on_frame_header_read(const boost::system::error_code& ec, size_t bytes_transferred)
-{
-  if (!ec)
-  {
-    if (m_framebuilder.is_body_read_required())
-    {
-      boost::asio::async_read(m_socket, m_framebuilder.get_body_buffer(),
-                              boost::bind(&connection_impl::on_frame_body_read, this,
-                                          boost::asio::placeholder::error,
-                                          boost::asio::placeholder::bytes_transferred));
-    }
-    else
-    {
-      process_frame(m_framebuilder.create_frame());
-      begin_async_frame_read();
-    }
-  }
-  else
-  {
-    // Shit is going down
-
-  }
-}
-
-void connection_impl::on_frame_body_read(const boost::system::error_code& ec, size_t bytes_transferred)
-{
-  if (!ec)
-  {
-    process_frame(m_framebuilder.create_frame());
-    begin_async_frame_read();
-  }
-  else
-  {
-    // Shit is going down
-  }
-}
-
-void connection_impl::process_frame(detail::frame::ptr_t& fr)
-{
-  channel_impl::ptr_t channel = m_channelmap[fr->get_channel()];
-  channel->rpc_promise.set_value(fr);
-}
-
-void connection_impl::close()
-{
-  methods::connection::close::ptr_t close = methods::connection::close::create();
-  fr = detail::frame::create_from_method(0, close);
-  write_frame(fr);
-
-  method = detail::method::read(read_frame());
-  methods::connection::close_ok::ptr_t close_ok = detail::method_cast<methods::connection::close_ok>(method);
-  std::cout << method->to_string() << std::endl;
+  // Create Thread 0?
+  m_thread.start_async_read_loop();
 }
 
 detail::frame::ptr_t connection_impl::read_frame()
 {
-  m_framebuilder.reset();
-  boost::asio::read(m_socket, m_framebuilder.get_header_buffer());
-  if (m_framebuilder.is_body_read_required())
+  detail::frame_builder builder;
+  boost::asio::read(m_thread.get_socket(), builder.get_header_buffer());
+  if (builder.is_body_read_required())
   {
-    boost::asio::read(m_socket, m_framebuilder.get_body_buffer());
+    boost::asio::read(m_thread.get_socket(), builder.get_body_buffer());
   }
 
-  return m_framebuilder.create_frame();
+  return builder.create_frame();
 }
 
 void connection_impl::write_frame(const detail::frame::ptr_t& frame)
 {
-  boost::asio::write(m_socket, m_framewriter.get_sequence(frame));
+  detail::frame_writer writer;
+  boost::asio::write(m_thread.get_socket(), writer.get_sequence(frame));
 }
+
+connection_impl::connection_thread::connection_thread(connection_impl& connection_imp) :
+  m_socket(m_ioservice), m_connection(connection_imp)
+{
+}
+
+connection_impl::connection_thread::~connection_thread()
+{
+}
+
+void connection_impl::connection_thread::start_async_read_loop()
+{
+  begin_frame_read();
+  boost::thread connection_thread(boost::bind(&boost::asio::io_service::run, &m_ioservice));
+}
+
+connection_impl::connection_thread::channel_future_t connection_impl::connection_thread::begin_open_channel()
+{
+  channel_promise_ptr_t promise = boost::make_shared<channel_promise_t>();
+
+  m_ioservice.post(boost::bind(&connection_thread::start_open_channel, this, promise));
+
+  return promise->get_future();
+}
+
+void connection_impl::connection_thread::begin_frame_read()
+{
+  boost::asio::async_read(m_socket, m_builder.get_header_buffer(),
+                          boost::bind(&connection_thread::on_frame_header_read, this,
+                                      boost::asio::placeholders::error,
+                                      boost::asio::placeholders::bytes_transferred));
+}
+
+void connection_impl::connection_thread::on_frame_header_read(const boost::system::error_code& ec, size_t bytes_transferred)
+{
+  if (!ec)
+  {
+    if (m_builder.is_body_read_required())
+    {
+      boost::asio::async_read(m_socket, m_builder.get_body_buffer(),
+                              boost::bind(&connection_thread::on_frame_body_read, this,
+                                          boost::asio::placeholders::error,
+                                          boost::asio::placeholders::bytes_transferred));
+    }
+    else
+    {
+      detail::frame::ptr_t received_frame = m_builder.create_frame();
+      dispatch_frame(received_frame);
+      begin_frame_read();
+    }
+  }
+  else
+  {
+    // TODO: Deal with the fact the read failed in some way
+  }
+}
+
+void connection_impl::connection_thread::on_frame_body_read(const boost::system::error_code& ec, size_t bytes_transferred)
+{
+  if (!ec)
+  {
+    detail::frame::ptr_t received_frame = m_builder.create_frame();
+    dispatch_frame(received_frame);
+    begin_frame_read();
+  }
+  else
+  {
+    // TODO: Deal with the fact the read failed in some way
+  }
+}
+
+void connection_impl::connection_thread::dispatch_frame(const detail::frame::ptr_t& fr)
+{
+  uint16_t channel_id = fr->get_channel();
+  if (channel_id >= m_channels.size())
+  {
+    throw std::runtime_error("Channel not valid!");
+  }
+  m_channels[channel_id]->process_frame(fr);
+}
+
+void connection_impl::connection_thread::begin_write_frame(const detail::frame::ptr_t& fr)
+{
+  bool is_writing = (m_write_queue.size() > 0 ? true : false);
+  m_write_queue.push(fr);
+
+  if (!is_writing)
+  {
+    m_current_write_frame = m_write_queue.front();
+    m_write_queue.pop();
+    boost::asio::async_write(m_socket, m_writer.get_sequence(m_current_write_frame),
+                              boost::bind(&connection_thread::on_write_frame, this,
+                                          boost::asio::placeholders::error,
+                                          boost::asio::placeholders::bytes_transferred));
+  }
+
+}
+
+void connection_impl::connection_thread::on_write_frame(const boost::system::error_code& ec, size_t bytes_transferred)
+{
+  if (!ec)
+  {
+    if (m_write_queue.size() > 0)
+    {
+      m_current_write_frame = m_write_queue.front();
+      m_write_queue.pop();
+      boost::asio::async_write(m_socket, m_writer.get_sequence(m_current_write_frame),
+                               boost::bind(&connection_thread::on_write_frame, this,
+                                           boost::asio::placeholders::error,
+                                           boost::asio::placeholders::bytes_transferred));
+    }
+    else
+    {
+      m_current_write_frame.reset();
+    }
+  }
+  else
+  {
+    // TODO: deal with the fact something failed
+  }
+}
+
+void connection_impl::connection_thread::start_open_channel(channel_promise_ptr_t promise)
+{
+  try
+  {
+    channel_impl::ptr_t chan = create_next_channel(promise);
+    methods::channel::open::ptr_t open = methods::channel::open::create();
+    detail::frame::ptr_t frame = detail::frame::create_from_method(chan->get_channel_id(), open);
+    begin_write_frame(frame);
+  }
+  catch (std::runtime_error& e)
+  {
+    promise->set_exception(boost::copy_exception(e));
+  }
+}
+
+channel_impl::ptr_t connection_impl::connection_thread::create_next_channel(const channel_promise_ptr_t& promise)
+{
+  size_t next_id = m_channels.size();
+  if (next_id > std::numeric_limits<uint16_t>::max())
+  {
+    throw std::runtime_error("Out of channels!");
+  }
+  m_channels.push_back(boost::make_shared<channel_impl>(static_cast<uint16_t>(next_id), m_connection.shared_from_this(), promise));
+  return m_channels.back();
+}
+
 } // namespace impl
 } // namespace amqpp

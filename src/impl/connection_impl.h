@@ -2,6 +2,8 @@
 #define _LIBAMQPP_CONNECTION_IMPL_H_INCLUDED_
 
 #include "connection.h"
+#include "channel_impl.h"
+#include "frame.h"
 #include "frame_builder.h"
 #include "frame_writer.h"
 
@@ -17,6 +19,7 @@
 #include <boost/shared_ptr.hpp>
 #include <boost/thread/future.hpp>
 
+#include <queue>
 #include <string>
 #include <vector>
 
@@ -44,21 +47,56 @@ public:
   // Internal interface
   virtual void connect(const std::string& host, uint16_t port, const std::string& username, const std::string& password, const std::string& vhost);
 
-
-  void process_frame(detail::frame::ptr_t& frame);
-  void begin_async_frame_read();
-
-  typedef boost::unique_future<boost::shared_ptr<channel> > channel_future_t;
-  channel_future_t begin_open_channel();
-
-  uint16_t get_next_channel_id();
-
 private:
   boost::shared_ptr<detail::frame> read_frame();
   void write_frame(const boost::shared_ptr<detail::frame>& frame);
 
-  boost::asio::io_service m_ioservice;
-  boost::asio::ip::tcp::socket m_socket;
+  class connection_thread : boost::noncopyable
+  {
+  public: // Called from other threads
+    explicit connection_thread(connection_impl& impl);
+    virtual ~connection_thread();
+
+    inline boost::asio::io_service& get_io_service() { return m_ioservice; }
+    inline boost::asio::ip::tcp::socket& get_socket() { return m_socket; }
+
+    void start_async_read_loop();
+
+    typedef boost::unique_future<channel_impl::ptr_t> channel_future_t;
+    channel_future_t begin_open_channel();
+
+
+  public: // Stuff that is only ever called from within the io_service thread
+
+    void begin_frame_read();
+    void on_frame_header_read(const boost::system::error_code& ec, size_t bytes_transferred);
+    void on_frame_body_read(const boost::system::error_code& ec, size_t bytes_transferred);
+    void dispatch_frame(const detail::frame::ptr_t& fr);
+
+    void begin_write_frame(const detail::frame::ptr_t& fr);
+    void on_write_frame(const boost::system::error_code& ec, size_t bytes_transferred);
+
+    typedef boost::promise<channel_impl::ptr_t> channel_promise_t;
+    typedef boost::shared_ptr<channel_promise_t> channel_promise_ptr_t;
+
+    void start_open_channel(channel_promise_ptr_t channel_promise);
+    channel_impl::ptr_t create_next_channel(const channel_promise_ptr_t& promise);
+
+
+  private:
+    boost::asio::io_service m_ioservice;
+    boost::asio::ip::tcp::socket m_socket;
+    std::vector<channel_impl::ptr_t> m_channels;
+    std::queue<detail::frame::ptr_t> m_write_queue;
+
+    detail::frame_builder m_builder;
+    detail::frame_writer m_writer;
+    detail::frame::ptr_t m_current_write_frame;
+    connection_impl& m_connection;
+
+  };
+
+  connection_thread m_thread;
 
 };
 
