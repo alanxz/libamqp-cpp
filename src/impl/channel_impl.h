@@ -5,28 +5,33 @@
 #include "frame.h"
 
 #include <boost/cstdint.hpp>
+#include <boost/function.hpp>
 #include <boost/noncopyable.hpp>
+#include <boost/enable_shared_from_this.hpp>
 #include <boost/shared_ptr.hpp>
 #include <boost/thread/future.hpp>
 
 namespace amqpp
 {
-namespace detail
-{
-class frame;
-} // namespace detail
 namespace impl
 {
 
 class connection_impl;
 
-class channel_impl : boost::noncopyable, public amqpp::channel
+class channel_impl : boost::noncopyable, public amqpp::channel, public boost::enable_shared_from_this<channel_impl>
 {
 public:
-  typedef boost::shared_ptr<channel_impl> ptr_t;
-  explicit channel_impl(uint16_t& channel_id, boost::shared_ptr<connection_impl>& connection, boost::shared_ptr<boost::promise<channel_impl::ptr_t> >& promise);
-  virtual ~channel_impl();
 
+  enum channel_state
+  {
+    opening,
+    open,
+    close
+  };
+
+  typedef boost::shared_ptr<channel_impl> ptr_t;
+  explicit channel_impl(uint16_t channel_id, const boost::shared_ptr<connection_impl>& connection, const boost::shared_ptr<boost::promise<channel_impl::ptr_t> >& promise);
+  virtual ~channel_impl();
 
 public: // Internal interface
 
@@ -34,12 +39,12 @@ public: // Internal interface
 
   void process_frame(const detail::frame::ptr_t& frame);
 
-  boost::unique_future<boost::shared_ptr<detail::frame> > rpc_reply;
-  boost::promise<boost::shared_ptr<detail::frame> > rpc_promise;
+  void process_open(const detail::frame::ptr_t& frame, const boost::shared_ptr<boost::promise<channel_impl::ptr_t> >& promise);
 private:
   boost::shared_ptr<connection_impl> m_connection;
   const uint16_t m_channel_id;
-  boost::shared_ptr<boost::promise<channel_impl::ptr_t> > m_open_promise;
+  boost::function<void (const boost::shared_ptr<detail::frame>&)> m_continuation;
+  channel_state m_state;
 };
 
 } // namespace impl
