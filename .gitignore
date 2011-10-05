@@ -15,6 +15,7 @@ rabbitmq-codegen/
 *.pyc
 amqp_codegen.py
 amqp-rabbitmq-0.9.1.json
+*.*.rule
 
 # Ignore VS.NET stuff
 *.vc?proj*
