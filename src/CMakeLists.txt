@@ -5,7 +5,16 @@ set(AMQP_SPEC_JSON_PATH "${AMQP_CODEGEN_DIR}/amqp-rabbitmq-0.9.1.json")
 
 # Kinda hacky - we copy the amqp_codegen.py file so that our codegen.py
 # can find it without having to set the PYTHONPATH
-configure_file(${AMQP_CODEGEN_PY} ${CMAKE_CURRENT_SOURCE_DIR} COPYONLY)
+#configure_file(${AMQP_CODEGEN_PY} ${CMAKE_CURRENT_SOURCE_DIR} COPYONLY)
+
+set(LOCAL_AMQP_CODEGEN ${CMAKE_CURRENT_SOURCE_DIR}/amqp_codegen.py)
+
+add_custom_command(
+    OUTPUT ${LOCAL_AMQP_CODEGEN}
+    COMMAND ${CMAKE_COMMAND} ARGS -E copy ${AMQP_CODEGEN_PY} ${CMAKE_CURRENT_SOURCE_DIR}
+    DEPENDS rabbit-codegen
+    VERBATIM
+    )
 
 add_custom_command(
     OUTPUT ${CMAKE_CURRENT_BINARY_DIR}/methods.gen.h
@@ -46,6 +55,8 @@ set(LIBAMQP_CPP_SRCS
 
 	frame_builder.h
 	frame_builder.cpp
+
+	frame_handler.h
 
 	frame_writer.h
 	frame_writer.cpp

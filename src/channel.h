@@ -1,12 +1,17 @@
 #ifndef _LIBAMQPP_CHANNEL_H_INCLUDED_
 #define _LIBAMQPP_CHANNEL_H_INCLUDED_
 
-#include <boost/noncopyable.hpp>
+#include <boost/shared_ptr.hpp>
 
 namespace amqpp {
 
-class channel : boost::noncopyable
+class channel
 {
+public:
+  typedef boost::shared_ptr<channel> ptr_t;
+
+  virtual ~channel() {}
+
   virtual void declare_exchange() = 0;
   virtual void delete_exchange() = 0;
 

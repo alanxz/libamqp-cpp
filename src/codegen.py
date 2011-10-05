@@ -115,7 +115,7 @@ namespace methods
             print "  {"
             print "  public:"
             print "    typedef boost::shared_ptr<%s> ptr_t;" % (method_name)
-            print "    enum { METHOD_ID = %d };" % (m.index)
+            print "    enum { METHOD_ID = %d, CLASS_ID = %s::CLASS_ID };" % (m.index, c.name)
             print "    static ptr_t create() { return boost::make_shared<%s>(); }" % (method_name)
             print "    %s();" % (method_name)
             print "    virtual ~%s() {};" % (method_name)

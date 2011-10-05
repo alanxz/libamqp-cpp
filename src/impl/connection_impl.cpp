@@ -2,6 +2,7 @@
 
 #include "amqp_sasl.h"
 #include "channel_impl.h"
+#include "exception.h"
 #include "frame_builder.h"
 #include "frame.h"
 #include "methods.gen.h"
@@ -50,6 +51,8 @@ connection_impl::~connection_impl()
 
 boost::shared_ptr<channel> connection_impl::open_channel()
 {
+  connection_thread::channel_future_t new_channel = m_thread.begin_open_channel();
+  return new_channel.get();
 }
 
 void connection_impl::close()
@@ -141,6 +144,12 @@ void connection_impl::connect(const std::string& host, uint16_t port, const std:
   m_thread.start_async_read_loop();
 }
 
+void connection_impl::begin_write_method(uint16_t channel_id, const detail::method::ptr_t& method)
+{
+  detail::frame::ptr_t fr = detail::frame::create_from_method(channel_id, method);
+  m_thread.get_io_service().post(boost::bind(&connection_thread::begin_write_frame, &m_thread, fr));
+}
+
 detail::frame::ptr_t connection_impl::read_frame()
 {
   detail::frame_builder builder;
@@ -159,6 +168,10 @@ void connection_impl::write_frame(const detail::frame::ptr_t& frame)
   boost::asio::write(m_thread.get_socket(), writer.get_sequence(frame));
 }
 
+void connection_impl::channel0::process_frame(const detail::frame::ptr_t& fr)
+{
+}
+
 connection_impl::connection_thread::connection_thread(connection_impl& connection_imp) :
   m_socket(m_ioservice), m_connection(connection_imp)
 {
@@ -170,6 +183,9 @@ connection_impl::connection_thread::~connection_thread()
 
 void connection_impl::connection_thread::start_async_read_loop()
 {
+  m_channel0 = boost::make_shared<channel0>();
+  m_channels.push_back(boost::weak_ptr<detail::frame_handler>(m_channel0));
+
   begin_frame_read();
   boost::thread connection_thread(boost::bind(&boost::asio::io_service::run, &m_ioservice));
 }
@@ -236,7 +252,20 @@ void connection_impl::connection_thread::dispatch_frame(const detail::frame::ptr
   {
     throw std::runtime_error("Channel not valid!");
   }
-  m_channels[channel_id]->process_frame(fr);
+  boost::shared_ptr<detail::frame_handler> fh = m_channels[channel_id].lock();
+  if (fh == boost::shared_ptr<detail::frame_handler>())
+  {
+    // channel has been destructed....
+    throw std::runtime_error("Channel doens't exist!");
+  }
+  try
+  {
+    fh->process_frame(fr);
+  }
+  catch (amqpp::connection_exception&)
+  {
+    // Need to start shutting down the connection
+  }
 }
 
 void connection_impl::connection_thread::begin_write_frame(const detail::frame::ptr_t& fr)
@@ -302,8 +331,9 @@ channel_impl::ptr_t connection_impl::connection_thread::create_next_channel(cons
   {
     throw std::runtime_error("Out of channels!");
   }
-  m_channels.push_back(boost::make_shared<channel_impl>(static_cast<uint16_t>(next_id), m_connection.shared_from_this(), promise));
-  return m_channels.back();
+  channel_impl::ptr_t new_channel = boost::make_shared<channel_impl>(static_cast<uint16_t>(next_id), m_connection.shared_from_this(), promise);
+  m_channels.push_back(new_channel);
+  return new_channel;
 }
 
 } // namespace impl

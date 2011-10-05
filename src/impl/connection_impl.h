@@ -5,6 +5,7 @@
 #include "channel_impl.h"
 #include "frame.h"
 #include "frame_builder.h"
+#include "frame_handler.h"
 #include "frame_writer.h"
 
 #ifndef BOOST_ALL_NO_LIB
@@ -45,11 +46,21 @@ public:
 
 public:
   // Internal interface
-  virtual void connect(const std::string& host, uint16_t port, const std::string& username, const std::string& password, const std::string& vhost);
+  void connect(const std::string& host, uint16_t port, const std::string& username, const std::string& password, const std::string& vhost);
+
+  void begin_write_method(uint16_t channel_id, const detail::method::ptr_t& method);
 
 private:
   boost::shared_ptr<detail::frame> read_frame();
   void write_frame(const boost::shared_ptr<detail::frame>& frame);
+
+  class channel0 : boost::noncopyable, public detail::frame_handler
+  {
+  public:
+    virtual ~channel0() {}
+
+    virtual void process_frame(const detail::frame::ptr_t& frame);
+  };
 
   class connection_thread : boost::noncopyable
   {
@@ -64,7 +75,6 @@ private:
 
     typedef boost::unique_future<channel_impl::ptr_t> channel_future_t;
     channel_future_t begin_open_channel();
-
 
   public: // Stuff that is only ever called from within the io_service thread
 
@@ -86,7 +96,8 @@ private:
   private:
     boost::asio::io_service m_ioservice;
     boost::asio::ip::tcp::socket m_socket;
-    std::vector<channel_impl::ptr_t> m_channels;
+    std::vector<boost::weak_ptr<detail::frame_handler> > m_channels;
+    boost::shared_ptr<channel0> m_channel0;
     std::queue<detail::frame::ptr_t> m_write_queue;
 
     detail::frame_builder m_builder;

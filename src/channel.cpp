@@ -2,8 +2,4 @@
 
 namespace amqpp {
 
-channel::channel()
-{
-}
-
 } // namespace amqpp
