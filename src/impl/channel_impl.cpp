@@ -21,6 +21,39 @@ channel_impl::~channel_impl()
 {
 }
 
+void channel_impl::close()
+{
+  throw std::logic_error("Not implemented");
+}
+
+void channel_impl::declare_exchange()
+{
+}
+
+void channel_impl::delete_exchange()
+{
+}
+
+void channel_impl::declare_queue()
+{
+}
+
+void channel_impl::delete_queue()
+{
+}
+
+void channel_impl::bind_queue()
+{
+}
+
+void channel_impl::unbind_queue()
+{
+}
+
+void channel_impl::purge_queue()
+{
+}
+
 void channel_impl::process_frame(const detail::frame::ptr_t& frame)
 {
   assert(frame->get_channel() == m_channel_id);

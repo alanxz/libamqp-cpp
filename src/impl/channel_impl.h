@@ -33,6 +33,19 @@ public:
   explicit channel_impl(uint16_t channel_id, const boost::shared_ptr<connection_impl>& connection, const boost::shared_ptr<boost::promise<channel_impl::ptr_t> >& promise);
   virtual ~channel_impl();
 
+  virtual void close();
+
+  virtual void declare_exchange();
+  virtual void delete_exchange();
+
+  virtual void declare_queue();
+  virtual void delete_queue();
+
+  virtual void bind_queue();
+  virtual void unbind_queue();
+
+  virtual void purge_queue();
+
 public: // Internal interface
 
   inline uint16_t get_channel_id() { return m_channel_id; }
