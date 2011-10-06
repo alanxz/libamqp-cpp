@@ -2,8 +2,8 @@
 #define _LIBAMQPP_FRAME_H_INCLUDED_
 
 #include "export.h"
-#include "scoped_buffer.h"
-#include "methods.h"
+#include "detail/scoped_buffer.h"
+#include "detail/methods.h"
 #include "methods.gen.h"
 
 #include <boost/array.hpp>

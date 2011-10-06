@@ -1,14 +1,14 @@
 #include "channel_impl.h"
 
-#include "connection_impl.h"
-#include "frame.h"
-#include "methods.h"
+#include "detail/connection_impl.h"
+#include "detail/frame.h"
+#include "detail/methods.h"
 
 #include <boost/bind.hpp>
 #include <boost/thread/future.hpp>
 
 namespace amqpp {
-namespace impl {
+namespace detail {
 
 channel_impl::channel_impl(uint16_t channel_id, const boost::shared_ptr<connection_impl>& connection,
                            const boost::shared_ptr<boost::promise<channel_impl::ptr_t> >& promise) :
@@ -60,7 +60,7 @@ void channel_impl::purge_queue()
 {
 }
 
-void channel_impl::process_frame(const detail::frame::ptr_t& frame)
+void channel_impl::process_frame(const frame::ptr_t& frame)
 {
   assert(frame->get_channel() == m_channel_id);
 
@@ -80,16 +80,16 @@ void channel_impl::process_frame(const detail::frame::ptr_t& frame)
   }
 }
 
-void channel_impl::process_open(const detail::frame::ptr_t& fr, const boost::shared_ptr<boost::promise<channel_impl::ptr_t> >& promise)
+void channel_impl::process_open(const frame::ptr_t& fr, const boost::shared_ptr<boost::promise<channel_impl::ptr_t> >& promise)
 {
   try
   {
-    if (fr->get_type() != detail::frame::METHOD_TYPE)
+    if (fr->get_type() != frame::METHOD_TYPE)
     {
       throw amqpp::connection_exception();
     }
 
-    detail::method::ptr_t method = detail::method::read(fr);
+    method::ptr_t method = method::read(fr);
     if (method->class_id() == methods::channel::CLASS_ID &&
         method->method_id() == methods::channel::open_ok::METHOD_ID)
     {
@@ -127,10 +127,10 @@ void channel_impl::close_(uint16_t reply_code, const std::string& reply_text, ui
   m_connection->begin_write_method(get_channel_id(), close);
 }
 
-void channel_impl::closed_handler(const detail::frame::ptr_t& fr)
+void channel_impl::closed_handler(const frame::ptr_t& fr)
 {
   // Should this really do anything?
 }
 
-} // namespace impl
+} // namespace detail
 } // namespace amqpp

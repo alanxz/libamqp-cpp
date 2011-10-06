@@ -1,7 +1,7 @@
 #include "frame.h"
 
 #include "methods.gen.h"
-#include "wireformat.h"
+#include "detail/wireformat.h"
 
 #include <boost/array.hpp>
 #include <boost/iostreams/device/array.hpp>

@@ -1,7 +1,7 @@
 #ifndef _LIBAMQPCPP_WIREFORMAT_H_INCLUDED_
 #define _LIBAMQPCPP_WIREFORMAT_H_INCLUDED_
 
-#include "byteswap.h"
+#include "detail/byteswap.h"
 #include "export.h"
 #include "table.h"
 

@@ -1,8 +1,8 @@
 #include "table.h"
 
-#include "string_utils.h"
+#include "detail/string_utils.h"
 #include "table_entry.h"
-#include "wireformat.h"
+#include "detail/wireformat.h"
 
 #include <sstream>
 #include <stdexcept>

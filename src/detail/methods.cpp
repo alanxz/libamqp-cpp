@@ -1,5 +1,5 @@
 #include "methods.h"
-#include "frame.h"
+#include "detail/frame.h"
 
 #include <boost/asio/buffer.hpp>
 #include <boost/iostreams/device/array.hpp>

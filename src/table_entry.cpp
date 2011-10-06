@@ -1,5 +1,5 @@
 #include "table_entry.h"
-#include "string_utils.h"
+#include "detail/string_utils.h"
 
 #include <boost/mpl/at.hpp>
 #include <boost/mpl/int.hpp>

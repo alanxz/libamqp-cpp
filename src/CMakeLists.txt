@@ -42,51 +42,51 @@ set(LIBAMQP_CPP_SRCS
 	amqp_sasl.h
 	amqp_sasl.cpp
 
-	bitset.h
+	detail/bitset.h
 
-	byteswap.h
+	detail/byteswap.h
 
     channel.h
-    channel.cpp
+
+    detail/channel_impl.h
+    detail/channel_impl.cpp
 
     connection.h
     connection.cpp
 
+	detail/connection_impl.h
+	detail/connection_impl.cpp
+
+	detail/frame_builder.h
+	detail/frame_builder.cpp
+
+	detail/frame_handler.h
+
+	detail/frame_writer.h
+	detail/frame_writer.cpp
+
+    detail/frame.h
+    detail/frame.cpp
+
+    detail/methods.h
+    detail/methods.cpp
+
+    detail/scoped_buffer.h
+
+	detail/string_utils.h
+
+    detail/wireformat.h
+    detail/wireformat.cpp
+
 	exception.h
 
     export.h
-
-	frame_builder.h
-	frame_builder.cpp
-
-	frame_handler.h
-
-	frame_writer.h
-	frame_writer.cpp
-
-    frame.h
-    frame.cpp
-  impl/channel_impl.h
-  impl/channel_impl.cpp
-
-	impl/connection_impl.h
-	impl/connection_impl.cpp
-
-    methods.h
-    methods.cpp
-
-    scoped_buffer.h
-
-	string_utils.h
 
     table.h
     table.cpp
 
     table_entry.h
     table_entry.cpp
-
-    wireformat.h
-    wireformat.cpp
 
     ${CMAKE_CURRENT_BINARY_DIR}/methods.gen.h
     ${CMAKE_CURRENT_BINARY_DIR}/methods.gen.cpp

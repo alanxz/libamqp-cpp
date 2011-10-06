@@ -1,7 +1,7 @@
 #include "frame_writer.h"
 
-#include "frame.h"
-#include "wireformat.h"
+#include "detail/frame.h"
+#include "detail/wireformat.h"
 
 #include <boost/iostreams/device/array.hpp>
 #include <boost/iostreams/stream.hpp>

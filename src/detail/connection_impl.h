@@ -2,10 +2,10 @@
 #define _LIBAMQPP_CONNECTION_IMPL_H_INCLUDED_
 
 #include "connection.h"
-#include "frame.h"
-#include "frame_builder.h"
-#include "frame_handler.h"
-#include "frame_writer.h"
+#include "detail/frame.h"
+#include "detail/frame_builder.h"
+#include "detail/frame_handler.h"
+#include "detail/frame_writer.h"
 
 #ifndef BOOST_ALL_NO_LIB
 # define BOOST_ALL_NO_LIB
@@ -27,11 +27,8 @@ namespace amqpp
 {
 namespace detail
 {
-class frame;
-}
-namespace impl
-{
 
+class frame;
 class channel_impl;
 
 class connection_impl : public amqpp::connection, public boost::noncopyable, public boost::enable_shared_from_this<connection_impl>
@@ -47,18 +44,18 @@ public:
   // Internal interface
   void connect(const std::string& host, uint16_t port, const std::string& username, const std::string& password, const std::string& vhost);
 
-  void begin_write_method(uint16_t channel_id, const detail::method::ptr_t& method);
+  void begin_write_method(uint16_t channel_id, const method::ptr_t& method);
 
 private:
-  boost::shared_ptr<detail::frame> read_frame();
-  void write_frame(const boost::shared_ptr<detail::frame>& frame);
+  boost::shared_ptr<frame> read_frame();
+  void write_frame(const boost::shared_ptr<frame>& frame);
 
-  class channel0 : boost::noncopyable, public detail::frame_handler
+  class channel0 : boost::noncopyable, public frame_handler
   {
   public:
     virtual ~channel0() {}
 
-    virtual void process_frame(const detail::frame::ptr_t& frame);
+    virtual void process_frame(const frame::ptr_t& frame);
   };
 
   class connection_thread : boost::noncopyable
@@ -83,9 +80,9 @@ private:
     void begin_frame_read();
     void on_frame_header_read(const boost::system::error_code& ec, size_t bytes_transferred);
     void on_frame_body_read(const boost::system::error_code& ec, size_t bytes_transferred);
-    void dispatch_frame(const detail::frame::ptr_t& fr);
+    void dispatch_frame(const frame::ptr_t& fr);
 
-    void begin_write_frame(const detail::frame::ptr_t& fr);
+    void begin_write_frame(const frame::ptr_t& fr);
     void on_write_frame(const boost::system::error_code& ec, size_t bytes_transferred);
 
 
@@ -96,13 +93,13 @@ private:
   private:
     boost::asio::io_service m_ioservice;
     boost::asio::ip::tcp::socket m_socket;
-    std::vector<boost::weak_ptr<detail::frame_handler> > m_channels;
+    std::vector<boost::weak_ptr<frame_handler> > m_channels;
     boost::shared_ptr<channel0> m_channel0;
-    std::queue<detail::frame::ptr_t> m_write_queue;
+    std::queue<frame::ptr_t> m_write_queue;
 
-    detail::frame_builder m_builder;
-    detail::frame_writer m_writer;
-    detail::frame::ptr_t m_current_write_frame;
+    frame_builder m_builder;
+    frame_writer m_writer;
+    frame::ptr_t m_current_write_frame;
     connection_impl& m_connection;
 
   };
@@ -110,7 +107,7 @@ private:
   connection_thread m_thread;
 };
 
-} // namespace impl
+} // namespace detail
 } // namespace amqpp
 
 #endif // _LIBAMQPP_CONNECTION_IMPL_H_INCLUDED_

@@ -1,10 +1,10 @@
 #include "connection_impl.h"
 
 #include "amqp_sasl.h"
-#include "channel_impl.h"
+#include "detail/channel_impl.h"
 #include "exception.h"
-#include "frame_builder.h"
-#include "frame.h"
+#include "detail/frame_builder.h"
+#include "detail/frame.h"
 #include "methods.gen.h"
 #include "table.h"
 #include "table_entry.h"
@@ -35,7 +35,7 @@ using boost::asio::ip::tcp;
 
 namespace amqpp
 {
-namespace impl
+namespace detail
 {
 
 connection_impl::connection_impl(const std::string& host, uint16_t port, const std::string& username, const std::string& password, const std::string& vhost) :
@@ -88,8 +88,8 @@ void connection_impl::connect(const std::string& host, uint16_t port, const std:
   static const boost::array<char, 8> handshake = { { 'A', 'M', 'Q', 'P', 0, 0, 9, 1 } };
   boost::asio::write(sock, boost::asio::buffer(handshake));
 
-  detail::method::ptr_t method = detail::method::read(read_frame());
-  methods::connection::start::ptr_t start = detail::method_cast<methods::connection::start>(method);
+  method::ptr_t method = method::read(read_frame());
+  methods::connection::start::ptr_t start = method_cast<methods::connection::start>(method);
 
   if (0 != start->get_version_major() ||
       9 != start->get_version_minor())
@@ -114,45 +114,45 @@ void connection_impl::connect(const std::string& host, uint16_t port, const std:
   start_ok->set_locale("en_US");
 
   std::cout << start_ok->to_string() << std::endl;
-  detail::frame::ptr_t fr = detail::frame::create_from_method(0, start_ok);
+  frame::ptr_t fr = frame::create_from_method(0, start_ok);
 
   write_frame(fr);
 
-  method = detail::method::read(read_frame());
-  methods::connection::tune::ptr_t tune = detail::method_cast<methods::connection::tune>(method);
+  method = method::read(read_frame());
+  methods::connection::tune::ptr_t tune = method_cast<methods::connection::tune>(method);
 
   methods::connection::tune_ok::ptr_t tune_ok = methods::connection::tune_ok::create();
   tune_ok->set_channel_max(tune->get_channel_max());
   tune_ok->set_frame_max(tune->get_frame_max());
   tune_ok->set_heartbeat(tune->get_heartbeat());
 
-  fr = detail::frame::create_from_method(0, tune_ok);
+  fr = frame::create_from_method(0, tune_ok);
   write_frame(fr);
 
   methods::connection::open::ptr_t open = methods::connection::open::create();
   open->set_virtual_host(vhost);
   open->set_capabilities("");
   open->set_insist(false);
-  fr = detail::frame::create_from_method(0, open);
+  fr = frame::create_from_method(0, open);
   write_frame(fr);
 
-  method = detail::method::read(read_frame());
-  methods::connection::open_ok::ptr_t open_ok = detail::method_cast<methods::connection::open_ok>(method);
+  method = method::read(read_frame());
+  methods::connection::open_ok::ptr_t open_ok = method_cast<methods::connection::open_ok>(method);
   std::cout << method->to_string() << std::endl;
 
   // Create Thread 0?
   m_thread.start_async_read_loop();
 }
 
-void connection_impl::begin_write_method(uint16_t channel_id, const detail::method::ptr_t& method)
+void connection_impl::begin_write_method(uint16_t channel_id, const method::ptr_t& method)
 {
-  detail::frame::ptr_t fr = detail::frame::create_from_method(channel_id, method);
+  frame::ptr_t fr = frame::create_from_method(channel_id, method);
   m_thread.get_io_service().post(boost::bind(&connection_thread::begin_write_frame, &m_thread, fr));
 }
 
-detail::frame::ptr_t connection_impl::read_frame()
+frame::ptr_t connection_impl::read_frame()
 {
-  detail::frame_builder builder;
+  frame_builder builder;
   boost::asio::read(m_thread.get_socket(), builder.get_header_buffer());
   if (builder.is_body_read_required())
   {
@@ -162,13 +162,13 @@ detail::frame::ptr_t connection_impl::read_frame()
   return builder.create_frame();
 }
 
-void connection_impl::write_frame(const detail::frame::ptr_t& frame)
+void connection_impl::write_frame(const frame::ptr_t& frame)
 {
-  detail::frame_writer writer;
+  frame_writer writer;
   boost::asio::write(m_thread.get_socket(), writer.get_sequence(frame));
 }
 
-void connection_impl::channel0::process_frame(const detail::frame::ptr_t& fr)
+void connection_impl::channel0::process_frame(const frame::ptr_t& fr)
 {
 }
 
@@ -184,7 +184,7 @@ connection_impl::connection_thread::~connection_thread()
 void connection_impl::connection_thread::start_async_read_loop()
 {
   m_channel0 = boost::make_shared<channel0>();
-  m_channels.push_back(boost::weak_ptr<detail::frame_handler>(m_channel0));
+  m_channels.push_back(boost::weak_ptr<frame_handler>(m_channel0));
 
   begin_frame_read();
   boost::thread connection_thread(boost::bind(&boost::asio::io_service::run, &m_ioservice));
@@ -220,7 +220,7 @@ void connection_impl::connection_thread::on_frame_header_read(const boost::syste
     }
     else
     {
-      detail::frame::ptr_t received_frame = m_builder.create_frame();
+      frame::ptr_t received_frame = m_builder.create_frame();
       dispatch_frame(received_frame);
       begin_frame_read();
     }
@@ -235,7 +235,7 @@ void connection_impl::connection_thread::on_frame_body_read(const boost::system:
 {
   if (!ec)
   {
-    detail::frame::ptr_t received_frame = m_builder.create_frame();
+    frame::ptr_t received_frame = m_builder.create_frame();
     dispatch_frame(received_frame);
     begin_frame_read();
   }
@@ -245,15 +245,15 @@ void connection_impl::connection_thread::on_frame_body_read(const boost::system:
   }
 }
 
-void connection_impl::connection_thread::dispatch_frame(const detail::frame::ptr_t& fr)
+void connection_impl::connection_thread::dispatch_frame(const frame::ptr_t& fr)
 {
   uint16_t channel_id = fr->get_channel();
   if (channel_id >= m_channels.size())
   {
     throw std::runtime_error("Channel not valid!");
   }
-  boost::shared_ptr<detail::frame_handler> fh = m_channels[channel_id].lock();
-  if (fh == boost::shared_ptr<detail::frame_handler>())
+  boost::shared_ptr<frame_handler> fh = m_channels[channel_id].lock();
+  if (fh == boost::shared_ptr<frame_handler>())
   {
     // channel has been destructed....
     throw std::runtime_error("Channel doens't exist!");
@@ -268,7 +268,7 @@ void connection_impl::connection_thread::dispatch_frame(const detail::frame::ptr
   }
 }
 
-void connection_impl::connection_thread::begin_write_frame(const detail::frame::ptr_t& fr)
+void connection_impl::connection_thread::begin_write_frame(const frame::ptr_t& fr)
 {
   bool is_writing = (m_write_queue.size() > 0 ? true : false);
   m_write_queue.push(fr);
@@ -315,7 +315,7 @@ void connection_impl::connection_thread::start_open_channel(channel_promise_ptr_
   {
     channel_impl::ptr_t chan = create_next_channel(promise);
     methods::channel::open::ptr_t open = methods::channel::open::create();
-    detail::frame::ptr_t frame = detail::frame::create_from_method(chan->get_channel_id(), open);
+    frame::ptr_t frame = frame::create_from_method(chan->get_channel_id(), open);
     begin_write_frame(frame);
   }
   catch (std::runtime_error& e)
@@ -336,5 +336,5 @@ channel_impl::ptr_t connection_impl::connection_thread::create_next_channel(cons
   return new_channel;
 }
 
-} // namespace impl
+} // namespace detail
 } // namespace amqpp

@@ -1,7 +1,7 @@
 #ifndef _LIBAMQPP_FRAME_HANDLER_H_INCLUDED_
 #define _LIBAMQPP_FRAME_HANDLER_H_INCLUDED_
 
-#include "frame.h"
+#include "detail/frame.h"
 
 #include <boost/shared_ptr.hpp>
 
