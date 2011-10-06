@@ -34,6 +34,9 @@ add_custom_command(
 include_directories(${CMAKE_CURRENT_SOURCE_DIR} ${CMAKE_CURRENT_BINARY_DIR})
 
 add_definitions(-DBOOST_ALL_NO_LIB)
+if (WIN32)
+	add_definitions(-D_WIN32_WINNT=0x501)
+endif (WIN32)
 
 set(LIBAMQP_CPP_SRCS
 	amqp_sasl.h
