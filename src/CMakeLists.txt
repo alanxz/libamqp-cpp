@@ -60,6 +60,9 @@ set(LIBAMQP_CPP_SRCS
 	detail/connection_impl.h
 	detail/connection_impl.cpp
 
+	detail/connection_manager.h
+	detail/connection_manager.cpp
+
 	detail/frame_builder.h
 	detail/frame_builder.cpp
 

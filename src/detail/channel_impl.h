@@ -19,6 +19,8 @@ namespace amqpp
 namespace detail
 {
 
+class connection_impl;
+
 class channel_impl : public amqpp::channel, boost::noncopyable, public boost::enable_shared_from_this<channel_impl>, public frame_handler
 {
 public:
