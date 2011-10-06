@@ -2,6 +2,7 @@
 #define AMQPP_IMPL_CHANNEL_IMPL_H
 
 #include "channel.h"
+#include "connection_impl.h"
 #include "exception.h"
 #include "frame.h"
 #include "frame_handler.h"
@@ -17,8 +18,6 @@ namespace amqpp
 {
 namespace impl
 {
-
-class connection_impl;
 
 class channel_impl : public amqpp::channel, boost::noncopyable, public boost::enable_shared_from_this<channel_impl>, public detail::frame_handler
 {

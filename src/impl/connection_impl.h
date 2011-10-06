@@ -2,7 +2,6 @@
 #define _LIBAMQPP_CONNECTION_IMPL_H_INCLUDED_
 
 #include "connection.h"
-#include "channel_impl.h"
 #include "frame.h"
 #include "frame_builder.h"
 #include "frame_handler.h"
@@ -73,7 +72,10 @@ private:
 
     void start_async_read_loop();
 
-    typedef boost::unique_future<channel_impl::ptr_t> channel_future_t;
+    typedef boost::promise<boost::shared_ptr<channel_impl> > channel_promise_t;
+    typedef boost::shared_ptr<channel_promise_t> channel_promise_ptr_t;
+    typedef boost::unique_future<boost::shared_ptr<channel_impl> > channel_future_t;
+
     channel_future_t begin_open_channel();
 
   public: // Stuff that is only ever called from within the io_service thread
@@ -86,11 +88,9 @@ private:
     void begin_write_frame(const detail::frame::ptr_t& fr);
     void on_write_frame(const boost::system::error_code& ec, size_t bytes_transferred);
 
-    typedef boost::promise<channel_impl::ptr_t> channel_promise_t;
-    typedef boost::shared_ptr<channel_promise_t> channel_promise_ptr_t;
 
     void start_open_channel(channel_promise_ptr_t channel_promise);
-    channel_impl::ptr_t create_next_channel(const channel_promise_ptr_t& promise);
+    boost::shared_ptr<channel_impl> create_next_channel(const channel_promise_ptr_t& promise);
 
 
   private:
@@ -108,9 +108,9 @@ private:
   };
 
   connection_thread m_thread;
-
 };
 
 } // namespace impl
 } // namespace amqpp
+
 #endif // _LIBAMQPP_CONNECTION_IMPL_H_INCLUDED_
