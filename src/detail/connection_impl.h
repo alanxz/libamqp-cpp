@@ -2,6 +2,7 @@
 #define _LIBAMQPP_CONNECTION_IMPL_H_INCLUDED_
 
 #include "connection.h"
+#include "detail/channel0.h"
 #include "detail/frame.h"
 #include "detail/frame_builder.h"
 #include "detail/frame_handler.h"
@@ -49,14 +50,6 @@ public:
 private:
   boost::shared_ptr<frame> read_frame();
   void write_frame(const boost::shared_ptr<frame>& frame);
-
-  class channel0 : boost::noncopyable, public frame_handler
-  {
-  public:
-    virtual ~channel0() {}
-
-    virtual void process_frame(const frame::ptr_t& frame);
-  };
 
   class connection_thread : boost::noncopyable
   {

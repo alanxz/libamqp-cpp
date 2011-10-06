@@ -48,11 +48,14 @@ set(LIBAMQP_CPP_SRCS
 
     channel.h
 
-    detail/channel_impl.h
-    detail/channel_impl.cpp
-
     connection.h
     connection.cpp
+
+	detail/channel0.h
+	detail/channel0.cpp
+
+    detail/channel_impl.h
+    detail/channel_impl.cpp
 
 	detail/connection_impl.h
 	detail/connection_impl.cpp

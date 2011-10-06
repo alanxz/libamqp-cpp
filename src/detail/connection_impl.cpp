@@ -168,10 +168,6 @@ void connection_impl::write_frame(const frame::ptr_t& frame)
   boost::asio::write(m_thread.get_socket(), writer.get_sequence(frame));
 }
 
-void connection_impl::channel0::process_frame(const frame::ptr_t& fr)
-{
-}
-
 connection_impl::connection_thread::connection_thread(connection_impl& connection_imp) :
   m_socket(m_ioservice), m_connection(connection_imp)
 {
