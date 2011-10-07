@@ -40,8 +40,6 @@ public:
   void begin_write_method(uint16_t channel_id, const method::ptr_t& method);
 
 private:
-  boost::shared_ptr<frame> read_frame();
-  void write_frame(const boost::shared_ptr<frame>& frame);
 
 
   connection_manager m_thread;

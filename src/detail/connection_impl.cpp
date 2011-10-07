@@ -49,11 +49,6 @@ connection_impl::~connection_impl()
 }
 
 
-boost::shared_ptr<channel> connection_impl::open_channel()
-{
-  connection_manager::channel_future_t new_channel = m_thread.begin_open_channel();
-  return new_channel.get();
-}
 
 void connection_impl::close()
 {
@@ -88,7 +83,7 @@ void connection_impl::connect(const std::string& host, uint16_t port, const std:
   static const boost::array<char, 8> handshake = { { 'A', 'M', 'Q', 'P', 0, 0, 9, 1 } };
   boost::asio::write(sock, boost::asio::buffer(handshake));
 
-  method::ptr_t method = method::read(read_frame());
+  method::ptr_t method = method::read(m_thread.read_frame());
   methods::connection::start::ptr_t start = method_cast<methods::connection::start>(method);
 
   if (0 != start->get_version_major() ||
@@ -116,9 +111,9 @@ void connection_impl::connect(const std::string& host, uint16_t port, const std:
   std::cout << start_ok->to_string() << std::endl;
   frame::ptr_t fr = frame::create_from_method(0, start_ok);
 
-  write_frame(fr);
+  m_thread.write_frame(fr);
 
-  method = method::read(read_frame());
+  method = method::read(m_thread.read_frame());
   methods::connection::tune::ptr_t tune = method_cast<methods::connection::tune>(method);
 
   methods::connection::tune_ok::ptr_t tune_ok = methods::connection::tune_ok::create();
@@ -127,21 +122,27 @@ void connection_impl::connect(const std::string& host, uint16_t port, const std:
   tune_ok->set_heartbeat(tune->get_heartbeat());
 
   fr = frame::create_from_method(0, tune_ok);
-  write_frame(fr);
+  m_thread.write_frame(fr);
 
   methods::connection::open::ptr_t open = methods::connection::open::create();
   open->set_virtual_host(vhost);
   open->set_capabilities("");
   open->set_insist(false);
   fr = frame::create_from_method(0, open);
-  write_frame(fr);
+  m_thread.write_frame(fr);
 
-  method = method::read(read_frame());
+  method = method::read(m_thread.read_frame());
   methods::connection::open_ok::ptr_t open_ok = method_cast<methods::connection::open_ok>(method);
   std::cout << method->to_string() << std::endl;
 
   // Create Thread 0?
   m_thread.start_async_read_loop();
+}
+
+boost::shared_ptr<channel> connection_impl::open_channel()
+{
+  connection_manager::channel_future_t new_channel = m_thread.begin_open_channel();
+  return new_channel.get();
 }
 
 void connection_impl::begin_write_method(uint16_t channel_id, const method::ptr_t& method)
@@ -150,23 +151,6 @@ void connection_impl::begin_write_method(uint16_t channel_id, const method::ptr_
   m_thread.get_io_service().post(boost::bind(&connection_manager::begin_write_frame, &m_thread, fr));
 }
 
-frame::ptr_t connection_impl::read_frame()
-{
-  frame_builder builder;
-  boost::asio::read(m_thread.get_socket(), builder.get_header_buffer());
-  if (builder.is_body_read_required())
-  {
-    boost::asio::read(m_thread.get_socket(), builder.get_body_buffer());
-  }
-
-  return builder.create_frame();
-}
-
-void connection_impl::write_frame(const frame::ptr_t& frame)
-{
-  frame_writer writer;
-  boost::asio::write(m_thread.get_socket(), writer.get_sequence(frame));
-}
 
 
 } // namespace detail

@@ -177,5 +177,21 @@ channel_impl::ptr_t connection_manager::create_next_channel(const channel_promis
   return new_channel;
 }
 
+frame::ptr_t connection_manager::read_frame()
+{
+  boost::asio::read(m_socket, m_builder.get_header_buffer());
+  if (m_builder.is_body_read_required())
+  {
+    boost::asio::read(m_socket, m_builder.get_body_buffer());
+  }
+
+  return m_builder.create_frame();
+}
+
+void connection_manager::write_frame(const frame::ptr_t& frame)
+{
+  boost::asio::write(m_socket, m_writer.get_sequence(frame));
+}
+
 } // namespace detail
 } // namespace amqpp

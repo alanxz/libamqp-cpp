@@ -46,6 +46,9 @@ public: // Called from other threads
 
   channel_future_t begin_open_channel();
 
+  boost::shared_ptr<frame> read_frame();
+  void write_frame(const boost::shared_ptr<frame>& frame);
+
 public: // Stuff that is only ever called from within the io_service thread
 
   void begin_frame_read();

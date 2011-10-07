@@ -10,6 +10,47 @@
 namespace amqpp {
 namespace detail {
 
+template <class SentMethodT, class ResponseMethodT>
+boost::unique_future<typename ResponseMethodT::ptr_t> channel_impl::begin_rpc(const typename SentMethodT::ptr_t& method)
+{
+  typedef boost::promise<typename ResponseMethodT::ptr_t> rpc_promise_t;
+  typedef boost::shared_ptr<rpc_promise_t> rpc_promise_ptr_t;
+
+  frame::ptr_t out_frame = frame::create_from_method(get_channel_id(), method);
+
+  rpc_promise_ptr_t rpc_promise = boost::make_shared<rpc_promise_t>();
+
+  m_continuation = boost::bind(&channel_impl::rpc_handler<ResponseMethodT>, this, _1, rpc_promise);
+
+  m_connection->begin_write_method(get_channel_id(), method);
+
+  return rpc_promise->get_future();
+}
+
+template <class ResponseMethodT>
+void channel_impl::rpc_handler(const frame::ptr_t& fr, boost::shared_ptr<boost::promise<typename ResponseMethodT::ptr_t> >& promise)
+{
+  try
+  {
+    if (fr->get_type() != frame::METHOD_TYPE)
+    {
+      throw amqpp::connection_exception();
+    }
+    method::ptr_t method = method::read(fr);
+    if (method->class_id() != ResponseMethodT::CLASS_ID ||
+        method->method_id() != ResponseMethodT::METHOD_ID)
+    {
+      throw amqpp::connection_exception();
+    }
+    promise->set_value(method_cast<ResponseMethodT>(method));
+  }
+  catch (std::exception& e)
+  {
+    promise->set_exception(boost::copy_exception(e));
+    throw;
+  }
+}
+
 channel_impl::channel_impl(uint16_t channel_id, const boost::shared_ptr<connection_impl>& connection,
                            const boost::shared_ptr<boost::promise<channel_impl::ptr_t> >& promise) :
   m_connection(connection), m_channel_id(channel_id), m_state(opening)
