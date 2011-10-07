@@ -1,6 +1,6 @@
 
-#include "wireformat.h"
-#include "byteswap.h"
+#include "detail/wireformat.h"
+#include "detail/byteswap.h"
 
 #include <gtest/gtest.h>
 #include <boost/cstdint.hpp>

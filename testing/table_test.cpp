@@ -1,5 +1,5 @@
 #include "table.h"
-#include "wireformat.h"
+#include "detail/wireformat.h"
 
 #include <gtest/gtest.h>
 #include <stdexcept>

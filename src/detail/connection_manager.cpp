@@ -6,6 +6,7 @@
 #include <boost/asio/placeholders.hpp>
 #include <boost/asio/read.hpp>
 #include <boost/asio/write.hpp>
+#include <boost/thread/thread.hpp>
 
 namespace amqpp
 {
@@ -27,7 +28,7 @@ void connection_manager::start_async_read_loop()
   m_channels.push_back(boost::weak_ptr<frame_handler>(m_channel0));
 
   begin_frame_read();
-  boost::thread connection_manager(boost::bind(&boost::asio::io_service::run, &m_ioservice));
+  boost::thread conn_thread(boost::bind(&boost::asio::io_service::run, &m_ioservice));
 }
 
 connection_manager::channel_future_t connection_manager::begin_open_channel()

@@ -1,4 +1,4 @@
-#include "byteswap.h"
+#include "detail/byteswap.h"
 
 #include <gtest/gtest.h>
 #include <boost/cstdint.hpp>

@@ -1,4 +1,4 @@
-#include "methods.h"
+#include "detail/methods.h"
 #include "methods.gen.h"
 
 #include <gtest/gtest.h>

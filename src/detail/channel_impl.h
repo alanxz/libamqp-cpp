@@ -2,7 +2,6 @@
 #define AMQPP_IMPL_CHANNEL_IMPL_H
 
 #include "channel.h"
-#include "detail/connection_impl.h"
 #include "exception.h"
 #include "detail/frame.h"
 #include "detail/frame_handler.h"

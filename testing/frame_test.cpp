@@ -1,6 +1,6 @@
-#include "frame.h"
-#include "frame_builder.h"
-#include "frame_writer.h"
+#include "detail/frame.h"
+#include "detail/frame_builder.h"
+#include "detail/frame_writer.h"
 #include "methods.gen.h"
 
 #include <boost/asio/buffers_iterator.hpp>
