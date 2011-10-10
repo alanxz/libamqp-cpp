@@ -16,15 +16,22 @@ boost::unique_future<typename ResponseMethodT::ptr_t> channel_impl::begin_rpc(co
   typedef boost::promise<typename ResponseMethodT::ptr_t> rpc_promise_t;
   typedef boost::shared_ptr<rpc_promise_t> rpc_promise_ptr_t;
 
-  frame::ptr_t out_frame = frame::create_from_method(get_channel_id(), method);
+  if (!m_channel_closed_future.is_ready())
+  {
+    frame::ptr_t out_frame = frame::create_from_method(get_channel_id(), method);
 
-  rpc_promise_ptr_t rpc_promise = boost::make_shared<rpc_promise_t>();
+    rpc_promise_ptr_t rpc_promise = boost::make_shared<rpc_promise_t>();
 
-  m_continuation = boost::bind(&channel_impl::rpc_handler<ResponseMethodT>, this, _1, rpc_promise);
+    m_continuation = boost::bind(&channel_impl::rpc_handler<ResponseMethodT>, this, _1, rpc_promise);
 
-  m_connection->begin_write_method(get_channel_id(), method);
+    m_connection->begin_write_method(get_channel_id(), method);
 
-  return rpc_promise->get_future();
+    return rpc_promise->get_future();
+  }
+  else
+  {
+    throw std::runtime_error("Channel closed");
+  }
 }
 
 template <class ResponseMethodT>
@@ -73,7 +80,16 @@ void channel_impl::declare_exchange()
   methods::exchange::declare::ptr_t declare = methods::exchange::declare::create();
   boost::unique_future<methods::exchange::declare_ok::ptr_t> rpc_future = 
     begin_rpc<methods::exchange::declare, methods::exchange::declare_ok>(declare);
-  methods::exchange::declare_ok::ptr_t declare_ok = rpc_future.get();
+
+  unsigned future = boost::wait_for_any(rpc_future, m_channel_closed_future);
+  if (0 == future)
+  {
+    methods::exchange::declare_ok::ptr_t declare_ok = rpc_future.get();
+  }
+  else
+  {
+    throw std::runtime_error("Channel is closed");
+  }
 }
 
 
@@ -112,12 +128,6 @@ void channel_impl::process_frame(const frame::ptr_t& frame)
   catch (amqpp::channel_exception& e)
   {
     close_(e);
-  }
-  catch (amqpp::connection_exception)
-  {
-    // If we have a connection
-    m_state = closed;
-    throw;
   }
 }
 
@@ -171,6 +181,11 @@ void channel_impl::close_(uint16_t reply_code, const std::string& reply_text, ui
 void channel_impl::closed_handler(const frame::ptr_t& fr)
 {
   // Should this really do anything?
+}
+
+void channel_impl::close_async()
+{
+  m_channel_closed_promise.set_value(1);
 }
 
 } // namespace detail

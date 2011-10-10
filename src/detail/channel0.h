@@ -18,6 +18,7 @@ public:
   virtual ~channel0() {}
 
   virtual void process_frame(const frame::ptr_t& frame);
+  virtual void close_async();
 };
 
 }

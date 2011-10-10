@@ -1,0 +1,27 @@
+Events that can cause a connection close:
+1. connection->close() // Sync
+2. Receive a connection:close from the broker // async
+3. Send/Receive causes an error // async
+4. Receive a response that requires us to send a connection exception
+
+Events that will cause a channel to be put in the closed state:
+1. channel->close() // Sync
+2. Receive a channel:close from the broker // async
+3. Connection closes (see above) // Async
+
+So the plan for dealing with synchronizing closing:
+
+Channels will contain a future that will get set when the channel gets closed.
+- If the close comes asynchronously
+  + And the channel isn't being used, it'll throw an error next time its used
+  + And the channel is in the middle of an RPC, the future of the channel close will come before the
+    RPC and will end the rpc with an error
+- If the close comes synchronously
+  + The future will still be set, and the call back will be set appropriately to handle the close/close-ok messages
+
+
+Connections will also contain a future that will get set when the connection gets closed.
+- If the close comes asynchronously then all channels will be notified to set their channels to close, and
+- If the close comes synchronously a message will be published to the ioloop and whatever called it will block until
+  the channel closes
+  + Todo: how do other threads that call close deal with it?

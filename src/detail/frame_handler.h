@@ -18,6 +18,7 @@ public:
   virtual ~frame_handler() {}
 
   virtual void process_frame(const detail::frame::ptr_t& frame) = 0;
+  virtual void close_async() = 0;
 };
 }
 } // namespace amqpp

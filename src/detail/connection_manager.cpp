@@ -14,7 +14,7 @@ namespace detail
 {
 
 connection_manager::connection_manager(connection_impl& connection_imp) :
-  m_socket(m_ioservice), m_connection(connection_imp)
+  m_socket(m_ioservice), m_connection(connection_imp), m_state(open_state)
 {
 }
 
@@ -22,6 +22,31 @@ connection_manager::~connection_manager()
 {
 }
 
+/**
+  * Read a single frame syncronously
+  */
+frame::ptr_t connection_manager::read_frame()
+{
+  boost::asio::read(m_socket, m_builder.get_header_buffer());
+  if (m_builder.is_body_read_required())
+  {
+    boost::asio::read(m_socket, m_builder.get_body_buffer());
+  }
+
+  return m_builder.create_frame();
+}
+
+/**
+  * Write a single frame synchronously
+  */
+void connection_manager::write_frame(const frame::ptr_t& frame)
+{
+  boost::asio::write(m_socket, m_writer.get_sequence(frame));
+}
+
+/**
+  * Start the Asynchronous read loop
+  */
 void connection_manager::start_async_read_loop()
 {
   m_channel0 = boost::make_shared<channel0>();
@@ -38,6 +63,18 @@ connection_manager::channel_future_t connection_manager::begin_open_channel()
   m_ioservice.post(boost::bind(&connection_manager::start_open_channel, this, promise));
 
   return promise->get_future();
+}
+
+void connection_manager::write_frame_async(const frame::ptr_t& fr)
+{
+  if (m_state == open_state)
+  {
+    m_ioservice.post(boost::bind(&connection_manager::begin_write_frame, this, fr));
+  }
+  else
+  {
+    throw std::runtime_error("Attempted to use a connection that isn't open");
+  }
 }
 
 void connection_manager::begin_frame_read()
@@ -68,7 +105,7 @@ void connection_manager::on_frame_header_read(const boost::system::error_code& e
   }
   else
   {
-    // TODO: Deal with the fact the read failed in some way
+    on_socket_close(ec);
   }
 }
 
@@ -82,7 +119,7 @@ void connection_manager::on_frame_body_read(const boost::system::error_code& ec,
   }
   else
   {
-    // TODO: Deal with the fact the read failed in some way
+    on_socket_close(ec);
   }
 }
 
@@ -111,17 +148,20 @@ void connection_manager::dispatch_frame(const frame::ptr_t& fr)
 
 void connection_manager::begin_write_frame(const frame::ptr_t& fr)
 {
-  bool is_writing = (m_write_queue.size() > 0 ? true : false);
-  m_write_queue.push(fr);
-
-  if (!is_writing)
+  if (m_state == open_state)
   {
-    m_current_write_frame = m_write_queue.front();
-    m_write_queue.pop();
-    boost::asio::async_write(m_socket, m_writer.get_sequence(m_current_write_frame),
-                              boost::bind(&connection_manager::on_write_frame, this,
-                                          boost::asio::placeholders::error,
-                                          boost::asio::placeholders::bytes_transferred));
+    bool is_writing = (m_write_queue.size() > 0 ? true : false);
+    m_write_queue.push(fr);
+
+    if (!is_writing)
+    {
+      m_current_write_frame = m_write_queue.front();
+      m_write_queue.pop();
+      boost::asio::async_write(m_socket, m_writer.get_sequence(m_current_write_frame),
+                               boost::bind(&connection_manager::on_write_frame, this,
+                                           boost::asio::placeholders::error,
+                                           boost::asio::placeholders::bytes_transferred));
+    }
   }
 
 }
@@ -146,7 +186,7 @@ void connection_manager::on_write_frame(const boost::system::error_code& ec, siz
   }
   else
   {
-    // TODO: deal with the fact something failed
+    on_socket_close(ec);
   }
 }
 
@@ -177,20 +217,23 @@ channel_impl::ptr_t connection_manager::create_next_channel(const channel_promis
   return new_channel;
 }
 
-frame::ptr_t connection_manager::read_frame()
+void connection_manager::on_socket_close(const boost::system::error_code& ec)
 {
-  boost::asio::read(m_socket, m_builder.get_header_buffer());
-  if (m_builder.is_body_read_required())
-  {
-    boost::asio::read(m_socket, m_builder.get_body_buffer());
-  }
-
-  return m_builder.create_frame();
+  m_state = closed_state;
+  close_channels();
 }
 
-void connection_manager::write_frame(const frame::ptr_t& frame)
+void connection_manager::close_channels()
 {
-  boost::asio::write(m_socket, m_writer.get_sequence(frame));
+  for (std::vector<boost::weak_ptr<frame_handler> >::iterator it = (m_channels.begin() + 1);
+       it != m_channels.end(); ++it)
+  {
+    frame_handler::ptr_t chan = it->lock();
+    if (chan != frame_handler::ptr_t())
+    {
+      chan->close_async();
+    }
+  }
 }
 
 } // namespace detail

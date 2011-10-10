@@ -59,7 +59,8 @@ public: // Internal interface
   virtual void process_frame(const frame::ptr_t& frame);
 
   void process_open(const frame::ptr_t& frame, const boost::shared_ptr<boost::promise<channel_impl::ptr_t> >& promise);
-  
+
+  virtual void close_async();
 
   template <class SentMethodT, class ResponseMethodT>
   boost::unique_future<typename ResponseMethodT::ptr_t> begin_rpc(const typename SentMethodT::ptr_t& method);
@@ -75,7 +76,8 @@ private:
   boost::shared_ptr<connection_impl> m_connection;
   const uint16_t m_channel_id;
   boost::function<void (const boost::shared_ptr<frame>&)> m_continuation;
-  channel_state m_state;
+  boost::promise<int> m_channel_closed_promise;
+  boost::unique_future<int> m_channel_closed_future;
 };
 
 
