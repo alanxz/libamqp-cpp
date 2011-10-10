@@ -58,11 +58,11 @@ void channel_impl::rpc_handler(const frame::ptr_t& fr, boost::shared_ptr<boost::
   }
 }
 
-channel_impl::channel_impl(uint16_t channel_id, const boost::shared_ptr<connection_impl>& connection,
-                           const boost::shared_ptr<boost::promise<channel_impl::ptr_t> >& promise) :
-  m_connection(connection), m_channel_id(channel_id), m_state(opening)
+channel_impl::channel_impl(uint16_t channel_id, const boost::shared_ptr<connection_impl>& connection) :
+  m_connection(connection), m_channel_id(channel_id)
 {
-  m_continuation = boost::bind(&channel_impl::process_open, this, _1, promise);
+  // Need to hold on to a reference to this() until the callback happens, otherwise it gets destructed too soon
+  m_continuation = boost::bind(&channel_impl::process_open, this, _1);
 }
 
 channel_impl::~channel_impl()
@@ -81,7 +81,7 @@ void channel_impl::declare_exchange()
   boost::unique_future<methods::exchange::declare_ok::ptr_t> rpc_future = 
     begin_rpc<methods::exchange::declare, methods::exchange::declare_ok>(declare);
 
-  unsigned future = boost::wait_for_any(rpc_future, m_channel_closed_future);
+  size_t future = boost::wait_for_any(rpc_future, m_channel_closed_future);
   if (0 == future)
   {
     methods::exchange::declare_ok::ptr_t declare_ok = rpc_future.get();
@@ -131,7 +131,7 @@ void channel_impl::process_frame(const frame::ptr_t& frame)
   }
 }
 
-void channel_impl::process_open(const frame::ptr_t& fr, const boost::shared_ptr<boost::promise<channel_impl::ptr_t> >& promise)
+void channel_impl::process_open(const frame::ptr_t& fr)
 {
   try
   {
@@ -144,8 +144,7 @@ void channel_impl::process_open(const frame::ptr_t& fr, const boost::shared_ptr<
     if (method->class_id() == methods::channel::CLASS_ID &&
         method->method_id() == methods::channel::open_ok::METHOD_ID)
     {
-      m_state = open;
-      promise->set_value(shared_from_this());
+      m_channel_opened_promise.set_value(true);
     }
     else
     {
@@ -154,7 +153,7 @@ void channel_impl::process_open(const frame::ptr_t& fr, const boost::shared_ptr<
   }
   catch (std::exception& e)
   {
-    promise->set_exception(boost::copy_exception(e));
+    m_channel_opened_promise.set_exception(boost::copy_exception(e));
     throw;
   }
 }
@@ -172,7 +171,6 @@ void channel_impl::close_(uint16_t reply_code, const std::string& reply_text, ui
   close->set_class_id(class_id);
   close->set_method_id(method_id);
 
-  m_state = closed;
   m_continuation = boost::bind(&channel_impl::closed_handler, this, _1);
 
   m_connection->begin_write_method(get_channel_id(), close);

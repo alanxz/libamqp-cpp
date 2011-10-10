@@ -36,12 +36,16 @@ public:
   typedef boost::shared_ptr<channel_promise_t> channel_promise_ptr_t;
   typedef boost::unique_future<boost::shared_ptr<channel_impl> > channel_future_t;
 
+  typedef boost::promise<bool>        connection_closed_promise_t;
+  typedef boost::shared_future<bool>  connection_closed_future_t;
+
 public: // Called from other threads
   explicit connection_manager(connection_impl& impl);
   virtual ~connection_manager();
 
   inline boost::asio::io_service& get_io_service() { return m_ioservice; }
   inline boost::asio::ip::tcp::socket& get_socket() { return m_socket; }
+  inline connection_closed_future_t get_connection_closed_future() { return m_connection_closed_future; }
 
   boost::shared_ptr<frame> read_frame();
   void write_frame(const boost::shared_ptr<frame>& frame);
@@ -63,9 +67,10 @@ public: // Stuff that is only ever called from within the io_service thread
   void on_write_frame(const boost::system::error_code& ec, size_t bytes_transferred);
 
   void start_open_channel(channel_promise_ptr_t channel_promise);
-  boost::shared_ptr<channel_impl> create_next_channel(const channel_promise_ptr_t& promise);
+  boost::shared_ptr<channel_impl> create_next_channel();
 
-  void on_socket_close();
+  void on_socket_close(const boost::system::error_code& ec);
+  void close_channels();
 
 private:
   boost::asio::io_service m_ioservice;
@@ -73,6 +78,9 @@ private:
   std::vector<boost::weak_ptr<frame_handler> > m_channels;
   boost::shared_ptr<channel0> m_channel0;
   std::queue<frame::ptr_t> m_write_queue;
+
+  connection_closed_promise_t m_connection_closed_promise;
+  connection_closed_future_t m_connection_closed_future;
 
   frame_builder m_builder;
   frame_writer m_writer;

@@ -14,7 +14,7 @@ namespace detail
 {
 
 connection_manager::connection_manager(connection_impl& connection_imp) :
-  m_socket(m_ioservice), m_connection(connection_imp), m_state(open_state)
+m_socket(m_ioservice), m_connection(connection_imp), m_state(open_state), m_connection_closed_future(m_connection_closed_promise.get_future())
 {
 }
 
@@ -27,6 +27,7 @@ connection_manager::~connection_manager()
   */
 frame::ptr_t connection_manager::read_frame()
 {
+  m_builder.reset();
   boost::asio::read(m_socket, m_builder.get_header_buffer());
   if (m_builder.is_body_read_required())
   {
@@ -79,6 +80,7 @@ void connection_manager::write_frame_async(const frame::ptr_t& fr)
 
 void connection_manager::begin_frame_read()
 {
+  m_builder.reset();
   boost::asio::async_read(m_socket, m_builder.get_header_buffer(),
                           boost::bind(&connection_manager::on_frame_header_read, this,
                                       boost::asio::placeholders::error,
@@ -192,12 +194,14 @@ void connection_manager::on_write_frame(const boost::system::error_code& ec, siz
 
 void connection_manager::start_open_channel(channel_promise_ptr_t promise)
 {
+  channel_impl::ptr_t new_channel;
   try
   {
-    channel_impl::ptr_t chan = create_next_channel(promise);
+    new_channel = create_next_channel();
     methods::channel::open::ptr_t open = methods::channel::open::create();
-    frame::ptr_t frame = frame::create_from_method(chan->get_channel_id(), open);
+    frame::ptr_t frame = frame::create_from_method(new_channel->get_channel_id(), open);
     begin_write_frame(frame);
+    promise->set_value(new_channel);
   }
   catch (std::runtime_error& e)
   {
@@ -205,14 +209,15 @@ void connection_manager::start_open_channel(channel_promise_ptr_t promise)
   }
 }
 
-channel_impl::ptr_t connection_manager::create_next_channel(const channel_promise_ptr_t& promise)
+channel_impl::ptr_t connection_manager::create_next_channel()
 {
   size_t next_id = m_channels.size();
+  // TODO: Should be the min of the negotiated max and uint16_t max
   if (next_id > std::numeric_limits<uint16_t>::max())
   {
     throw std::runtime_error("Out of channels!");
   }
-  channel_impl::ptr_t new_channel = boost::make_shared<channel_impl>(static_cast<uint16_t>(next_id), m_connection.shared_from_this(), promise);
+  channel_impl::ptr_t new_channel = boost::make_shared<channel_impl>(static_cast<uint16_t>(next_id), m_connection.shared_from_this());
   m_channels.push_back(new_channel);
   return new_channel;
 }

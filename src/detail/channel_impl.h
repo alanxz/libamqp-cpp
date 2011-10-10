@@ -32,7 +32,7 @@ public:
   };
 
   typedef boost::shared_ptr<channel_impl> ptr_t;
-  explicit channel_impl(uint16_t channel_id, const boost::shared_ptr<connection_impl>& connection, const boost::shared_ptr<boost::promise<channel_impl::ptr_t> >& promise);
+  explicit channel_impl(uint16_t channel_id, const boost::shared_ptr<connection_impl>& connection);
   virtual ~channel_impl();
 
   virtual void close();
@@ -54,11 +54,16 @@ public: // Internal interface
   typedef boost::shared_ptr<rpc_promise_t> rpc_promise_ptr_t;
   typedef boost::unique_future<method::ptr_t> rpc_future_t;
 
+  typedef boost::promise<bool>        channel_opened_promise_t;
+  typedef boost::unique_future<bool>  channel_opened_future_t;
+
   inline uint16_t get_channel_id() { return m_channel_id; }
+
+  inline channel_opened_future_t get_channel_opened_future() { return m_channel_opened_promise.get_future(); }
 
   virtual void process_frame(const frame::ptr_t& frame);
 
-  void process_open(const frame::ptr_t& frame, const boost::shared_ptr<boost::promise<channel_impl::ptr_t> >& promise);
+  void process_open(const frame::ptr_t& frame);
 
   virtual void close_async();
 
@@ -72,10 +77,14 @@ public: // Internal interface
   void close_(uint16_t reply_code = 200, const std::string& reply_text = std::string(), uint16_t class_id = 0, uint16_t method_id = 0);
   void closed_handler(const frame::ptr_t& fr);
 
+
 private:
   boost::shared_ptr<connection_impl> m_connection;
   const uint16_t m_channel_id;
   boost::function<void (const boost::shared_ptr<frame>&)> m_continuation;
+
+  channel_opened_promise_t m_channel_opened_promise;
+
   boost::promise<int> m_channel_closed_promise;
   boost::unique_future<int> m_channel_closed_future;
 };

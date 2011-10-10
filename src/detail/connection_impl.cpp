@@ -141,8 +141,15 @@ void connection_impl::connect(const std::string& host, uint16_t port, const std:
 
 boost::shared_ptr<channel> connection_impl::open_channel()
 {
-  connection_manager::channel_future_t new_channel = m_thread.begin_open_channel();
-  return new_channel.get();
+  connection_manager::channel_future_t new_channel_promise = m_thread.begin_open_channel();
+  channel_impl::ptr_t new_channel = new_channel_promise.get();
+
+  boost::unique_future<bool> channel_open_future = new_channel->get_channel_opened_future();
+  boost::shared_future<bool> connection_closed_future = m_thread.get_connection_closed_future();
+
+  // If something and an exception gets put in a future, this will throw that exception
+  unsigned int res = boost::wait_for_any(channel_open_future, connection_closed_future);
+  return new_channel;
 }
 
 void connection_impl::begin_write_method(uint16_t channel_id, const method::ptr_t& method)
