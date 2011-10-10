@@ -29,3 +29,6 @@ Release/
 
 # Ignore QTCreator junk
 *.*.user
+
+# Ignore testing junk
+Testing/
