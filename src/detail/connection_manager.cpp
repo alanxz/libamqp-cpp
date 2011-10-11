@@ -130,13 +130,12 @@ void connection_manager::dispatch_frame(const frame::ptr_t& fr)
   uint16_t channel_id = fr->get_channel();
   if (channel_id >= m_channels.size())
   {
-    throw std::runtime_error("Channel not valid!");
+    handle_dead_channel_frame(fr);
   }
   boost::shared_ptr<frame_handler> fh = m_channels[channel_id].lock();
   if (fh == boost::shared_ptr<frame_handler>())
   {
-    // channel has been destructed....
-    throw std::runtime_error("Channel doens't exist!");
+    handle_dead_channel_frame(fr);
   }
   try
   {
@@ -237,6 +236,25 @@ void connection_manager::close_channels()
     if (chan != frame_handler::ptr_t())
     {
       chan->close_async();
+    }
+  }
+}
+
+
+// We use this to deal with any frames we get about channels that we
+// Don't know about anymore
+void connection_manager::handle_dead_channel_frame(const frame::ptr_t& fr)
+{
+  // Anything that isn't a channel:close, we simply drop
+  if (fr->get_type() == frame::METHOD_TYPE)
+  {
+    method::ptr_t received_method = method::read(fr);
+    if (received_method->class_id() == methods::channel::CLASS_ID &&
+        received_method->method_id() == methods::channel::close::METHOD_ID)
+    {
+      methods::channel::close_ok::ptr_t close_ok = methods::channel::close_ok::create();
+      frame::ptr_t close_frame = frame::create_from_method(fr->get_channel(), close_ok);
+      begin_write_frame(close_frame);
     }
   }
 }

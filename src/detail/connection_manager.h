@@ -72,6 +72,8 @@ public: // Stuff that is only ever called from within the io_service thread
   void on_socket_close(const boost::system::error_code& ec);
   void close_channels();
 
+  void handle_dead_channel_frame(const frame::ptr_t& fr);
+
 private:
   boost::asio::io_service m_ioservice;
   boost::asio::ip::tcp::socket m_socket;
