@@ -137,13 +137,16 @@ void connection_manager::dispatch_frame(const frame::ptr_t& fr)
   {
     handle_dead_channel_frame(fr);
   }
-  try
+  else
   {
-    fh->process_frame(fr);
-  }
-  catch (amqpp::connection_exception&)
-  {
-    // Need to start shutting down the connection
+    try
+    {
+      fh->process_frame(fr);
+    }
+    catch (amqpp::connection_exception&)
+    {
+      // Need to start shutting down the connection
+    }
   }
 }
 
