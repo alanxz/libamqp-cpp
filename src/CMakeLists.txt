@@ -79,6 +79,9 @@ set(LIBAMQP_CPP_SRCS
 
     detail/scoped_buffer.h
 
+	detail/statement.h
+	detail/statement.cpp
+
 	detail/string_utils.h
 
     detail/wireformat.h
