@@ -34,6 +34,9 @@ public:
     virtual uint16_t class_id() const = 0;
     virtual uint16_t method_id() const = 0;
 
+    virtual bool is_synchronous() const = 0;
+    virtual bool has_content() const = 0;
+
     virtual void write(std::ostream& o) const = 0;
     virtual uint32_t get_serialized_size() const = 0;
     virtual std::string to_string() const = 0;

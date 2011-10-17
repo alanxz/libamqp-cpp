@@ -123,6 +123,15 @@ namespace methods
             print "    virtual uint16_t class_id() const { return %s::CLASS_ID; }" % (c.name)
             print "    virtual uint16_t method_id() const { return %s::METHOD_ID; }" % (method_name)
             print ""
+            sync = 'false'
+            if (m.isSynchronous) :
+                sync = 'true'
+            print "    virtual bool is_synchronous() const { return %s; }" % (sync)
+            cont = 'false'
+            if (m.hasContent) :
+                cont = 'true'
+            print "    virtual bool has_content() const { return %s; }" % (cont)
+            print ""
             print "    static ptr_t read(std::istream& i);"
             print "    virtual void write(std::ostream& o) const;"
             print ""
