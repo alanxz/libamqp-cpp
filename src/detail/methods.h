@@ -4,7 +4,7 @@
 #include "export.h"
 
 #include <boost/cstdint.hpp>
-#include <boost/enable_shared_from_this.hpp>
+#include <boost/noncopyable.hpp>
 #include <boost/shared_ptr.hpp>
 
 #include <iosfwd>
@@ -22,24 +22,25 @@ namespace detail {
 class frame;
 typedef boost::shared_ptr<frame> frame_ptr_t;
 
-class AMQPP_EXPORT method : public boost::enable_shared_from_this<method>
+class AMQPP_EXPORT method : boost::noncopyable
 {
 public:
   typedef boost::shared_ptr<method> ptr_t;
-  static ptr_t read(const frame_ptr_t f);
+
+  static ptr_t read(const frame_ptr_t& f);
 
   // This is actually defined in methods.gen.cpp
   static ptr_t read(std::istream& i);
 
-    virtual uint16_t class_id() const = 0;
-    virtual uint16_t method_id() const = 0;
+  virtual uint16_t class_id() const = 0;
+  virtual uint16_t method_id() const = 0;
 
-    virtual bool is_synchronous() const = 0;
-    virtual bool has_content() const = 0;
+  virtual bool is_synchronous() const = 0;
+  virtual bool has_content() const = 0;
 
-    virtual void write(std::ostream& o) const = 0;
-    virtual uint32_t get_serialized_size() const = 0;
-    virtual std::string to_string() const = 0;
+  virtual void write(std::ostream& o) const = 0;
+  virtual uint32_t get_serialized_size() const = 0;
+  virtual std::string to_string() const = 0;
 };
 
 template <class T>

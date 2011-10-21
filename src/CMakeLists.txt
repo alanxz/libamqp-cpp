@@ -68,6 +68,8 @@ set(LIBAMQP_CPP_SRCS
 
 	detail/frame_handler.h
 
+	detail/frame_reader_adapter.h
+
 	detail/frame_writer.h
 	detail/frame_writer.cpp
 
@@ -76,6 +78,9 @@ set(LIBAMQP_CPP_SRCS
 
     detail/methods.h
     detail/methods.cpp
+
+	detail/properties.h
+	detail/properties.cpp
 
     detail/scoped_buffer.h
 
